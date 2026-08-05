@@ -49,7 +49,7 @@ RUN pip3 install --no-cache-dir --prefix=/usr \
 
 RUN mkdir -p /configfiles/etc/aodh && \
     oslo-config-generator \
-      --config-file ${SERVICE_SRC}/aodh/cmd/aodh-config-generator.conf \
+      --config-file ${SERVICE_SRC}/etc/aodh/aodh-config-generator.conf \
       --output-file /configfiles/etc/aodh/aodh.conf && \
     sed -i "/#pybasedir.*/d" /configfiles/etc/aodh/aodh.conf && \
     cp -a ${SERVICE_SRC}/aodh/api/api-paste.ini /configfiles/etc/aodh/
