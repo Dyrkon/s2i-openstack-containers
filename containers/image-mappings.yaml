@@ -25,6 +25,12 @@ openstack_version:
       - barbicanAPIImage
       - barbicanWorkerImage
       - barbicanKeystoneListenerImage
+    ceilometer/ceilometer-central:
+      - ceilometerCentralImage
+      - ceilometerNotificationImage
+    ceilometer/ceilometer-compute:
+      - ceilometerComputeImage
+      - ceilometerIpmiImage
     cinder/cinder-api:
       - cinderAPIImage
     cinder/cinder-backup:
