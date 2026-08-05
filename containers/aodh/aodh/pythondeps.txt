@@ -1,0 +1,2 @@
+# Database driver (mysql extra for oslo.db)
+oslo.db[mysql]
