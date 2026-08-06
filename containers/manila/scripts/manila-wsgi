@@ -1,0 +1,6 @@
+#! /usr/bin/python3 -sP
+# PBR Generated from 'wsgi_scripts'
+
+from manila.wsgi.wsgi import initialize_application
+
+application = initialize_application()

@@ -1,0 +1,12 @@
+python3
+python3-pip
+# cryptography from RPM for certifications and CVE handling
+python3-cryptography
+# Ceph storage backend (from centos10-storage repo in base image)
+ceph-common
+dbus-tools
+sqlite
+# LVM share backend
+lvm2
+# CIFS share backend
+samba
