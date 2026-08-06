@@ -48,4 +48,18 @@ enabled=1
 gpgcheck=0
 countme=1
 priority=100
-includepkgs=liboath,gperftools-libs,thrift,libpmemobj,liborc2,libpmem,parquet-libs,libarrow*,mock*,distribution-gpg-keys,python3-templated-dictionary,python3-backoff,python3-tox-current-env
+includepkgs=liboath,gperftools-libs,thrift,libpmemobj,liborc2,libpmem,parquet-libs,libarrow*
+
+[centos10-baseos]
+name=CentOS Stream 10 - BaseOS
+baseurl=http://mirror.stream.centos.org/10-stream/BaseOS/$basearch/os/
+enabled=1
+gpgcheck=0
+excludepkgs=openssl*
+
+[centos10-appstream]
+name=CentOS Stream 10 - AppStream
+baseurl=http://mirror.stream.centos.org/10-stream/AppStream/$basearch/os/
+enabled=1
+gpgcheck=0
+excludepkgs=openssl*
