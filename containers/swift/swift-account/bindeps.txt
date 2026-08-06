@@ -1,0 +1,10 @@
+python3
+python3-pip
+# cryptography from RPM for certifications and CVE handling
+python3-cryptography
+# Erasure coding library (runtime for pyeclib)
+liberasurecode
+# Object replication
+rsync
+# Health checks and replication port probes between nodes
+nmap-ncat

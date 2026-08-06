@@ -1,0 +1,2 @@
+# Rootwrap for privileged operations
+oslo.rootwrap

@@ -1,0 +1,373 @@
+#
+#
+#    pip-compile --allow-unsafe --constraint=upper-constraints.txt.master --output-file=requirements.lock.master --strip-extras src/swift/requirements.txt swift-account/pythonbuilddeps.txt swift-account/pythondeps.txt swift-container/pythonbuilddeps.txt swift-container/pythondeps.txt swift-object/pythonbuilddeps.txt swift-object/pythondeps.txt swift-proxy-server/pythonbuilddeps.txt swift-proxy-server/pythondeps.txt
+#
+amqp==5.3.1
+    # via
+    #   -c upper-constraints.txt.master
+    #   kombu
+    #   oslo-messaging
+bcrypt==5.0.0
+    # via
+    #   -c upper-constraints.txt.master
+    #   oslo-middleware
+cachetools==7.1.4
+    # via
+    #   -c upper-constraints.txt.master
+    #   oslo-messaging
+ceilometermiddleware==3.12.0
+    # via
+    #   -c upper-constraints.txt.master
+    #   -r swift-proxy-server/pythondeps.txt
+certifi==2026.7.22
+    # via requests
+cffi==2.0.0
+    # via
+    #   -c upper-constraints.txt.master
+    #   cryptography
+    #   xattr
+charset-normalizer==3.4.7
+    # via
+    #   -c upper-constraints.txt.master
+    #   requests
+debtcollector==3.1.0
+    # via
+    #   -c upper-constraints.txt.master
+    #   futurist
+    #   oslo-concurrency
+    #   oslo-log
+    #   oslo-messaging
+    #   oslo-rootwrap
+    #   oslo-service
+    #   python-keystoneclient
+decorator==5.3.1
+    # via
+    #   -c upper-constraints.txt.master
+    #   dogpile-cache
+dnspython==2.8.0
+    # via
+    #   -c upper-constraints.txt.master
+    #   -r src/swift/requirements.txt
+    #   eventlet
+dogpile-cache==1.5.0
+    # via
+    #   -c upper-constraints.txt.master
+    #   oslo-cache
+eventlet==0.41.0
+    # via
+    #   -c upper-constraints.txt.master
+    #   -r src/swift/requirements.txt
+    #   oslo-service
+fasteners==0.20
+    # via
+    #   -c upper-constraints.txt.master
+    #   oslo-concurrency
+futurist==3.4.0
+    # via
+    #   -c upper-constraints.txt.master
+    #   oslo-messaging
+greenlet==3.5.3
+    # via
+    #   -c upper-constraints.txt.master
+    #   -r src/swift/requirements.txt
+    #   eventlet
+    #   oslo-service
+idna==3.18
+    # via
+    #   -c upper-constraints.txt.master
+    #   requests
+iso8601==2.1.0
+    # via
+    #   -c upper-constraints.txt.master
+    #   keystoneauth1
+    #   oslo-utils
+jinja2==3.1.6
+    # via
+    #   -c upper-constraints.txt.master
+    #   oslo-middleware
+keystoneauth1==5.15.0
+    # via
+    #   -c upper-constraints.txt.master
+    #   ceilometermiddleware
+    #   keystonemiddleware
+    #   python-keystoneclient
+keystonemiddleware==13.0.0
+    # via
+    #   -c upper-constraints.txt.master
+    #   -r swift-proxy-server/pythondeps.txt
+kombu==5.6.2
+    # via
+    #   -c upper-constraints.txt.master
+    #   oslo-messaging
+lxml==6.1.1
+    # via
+    #   -c upper-constraints.txt.master
+    #   -r src/swift/requirements.txt
+markupsafe==3.0.3
+    # via
+    #   -c upper-constraints.txt.master
+    #   jinja2
+msgpack==1.2.1
+    # via
+    #   -c upper-constraints.txt.master
+    #   oslo-serialization
+netaddr==1.3.0
+    # via
+    #   -c upper-constraints.txt.master
+    #   oslo-config
+    #   oslo-utils
+os-service-types==1.8.2
+    # via
+    #   -c upper-constraints.txt.master
+    #   keystoneauth1
+oslo-cache==4.3.0
+    # via
+    #   -c upper-constraints.txt.master
+    #   keystonemiddleware
+oslo-concurrency==7.6.1
+    # via
+    #   -c upper-constraints.txt.master
+    #   oslo-service
+oslo-config==10.6.0
+    # via
+    #   -c upper-constraints.txt.master
+    #   ceilometermiddleware
+    #   keystonemiddleware
+    #   oslo-cache
+    #   oslo-concurrency
+    #   oslo-log
+    #   oslo-messaging
+    #   oslo-metrics
+    #   oslo-middleware
+    #   oslo-service
+    #   pycadf
+    #   python-keystoneclient
+oslo-context==6.5.0
+    # via
+    #   -c upper-constraints.txt.master
+    #   keystonemiddleware
+    #   oslo-log
+    #   oslo-messaging
+    #   oslo-middleware
+oslo-i18n==6.9.0
+    # via
+    #   -c upper-constraints.txt.master
+    #   keystonemiddleware
+    #   oslo-cache
+    #   oslo-concurrency
+    #   oslo-config
+    #   oslo-log
+    #   oslo-middleware
+    #   oslo-service
+    #   oslo-utils
+    #   python-keystoneclient
+oslo-log==8.3.0
+    # via
+    #   -c upper-constraints.txt.master
+    #   keystonemiddleware
+    #   oslo-cache
+    #   oslo-messaging
+    #   oslo-metrics
+    #   oslo-service
+oslo-messaging==18.2.0
+    # via
+    #   -c upper-constraints.txt.master
+    #   ceilometermiddleware
+oslo-metrics==0.16.0
+    # via
+    #   -c upper-constraints.txt.master
+    #   oslo-messaging
+oslo-middleware==8.2.0
+    # via
+    #   -c upper-constraints.txt.master
+    #   oslo-messaging
+oslo-rootwrap==7.10.0
+    # via
+    #   -c upper-constraints.txt.master
+    #   -r swift-account/pythondeps.txt
+    #   -r swift-container/pythondeps.txt
+    #   -r swift-object/pythondeps.txt
+oslo-serialization==5.11.0
+    # via
+    #   -c upper-constraints.txt.master
+    #   keystonemiddleware
+    #   oslo-log
+    #   oslo-messaging
+    #   pycadf
+    #   python-keystoneclient
+oslo-service==4.8.0
+    # via
+    #   -c upper-constraints.txt.master
+    #   oslo-messaging
+oslo-utils==10.1.1
+    # via
+    #   -c upper-constraints.txt.master
+    #   ceilometermiddleware
+    #   keystonemiddleware
+    #   oslo-cache
+    #   oslo-concurrency
+    #   oslo-log
+    #   oslo-messaging
+    #   oslo-metrics
+    #   oslo-middleware
+    #   oslo-serialization
+    #   oslo-service
+    #   python-keystoneclient
+packaging==26.2
+    # via
+    #   -c upper-constraints.txt.master
+    #   kombu
+    #   oslo-utils
+    #   python-keystoneclient
+paste==3.10.1
+    # via
+    #   -c upper-constraints.txt.master
+    #   oslo-service
+pastedeploy==3.1.0
+    # via
+    #   -c upper-constraints.txt.master
+    #   -r src/swift/requirements.txt
+    #   oslo-service
+pbr==7.0.3
+    # via
+    #   -c upper-constraints.txt.master
+    #   -r swift-account/pythonbuilddeps.txt
+    #   -r swift-container/pythonbuilddeps.txt
+    #   -r swift-object/pythonbuilddeps.txt
+    #   -r swift-proxy-server/pythonbuilddeps.txt
+    #   ceilometermiddleware
+    #   keystonemiddleware
+    #   os-service-types
+    #   oslo-concurrency
+    #   oslo-context
+    #   oslo-i18n
+    #   oslo-log
+    #   oslo-messaging
+    #   oslo-metrics
+    #   oslo-middleware
+    #   oslo-rootwrap
+    #   oslo-utils
+    #   python-keystoneclient
+prometheus-client==0.25.0
+    # via
+    #   -c upper-constraints.txt.master
+    #   oslo-metrics
+psutil==7.2.2
+    # via
+    #   -c upper-constraints.txt.master
+    #   oslo-utils
+pycadf==4.1.0
+    # via
+    #   -c upper-constraints.txt.master
+    #   ceilometermiddleware
+    #   keystonemiddleware
+pycparser==3.0
+    # via
+    #   -c upper-constraints.txt.master
+    #   cffi
+pyeclib==1.8.0
+    # via
+    #   -c upper-constraints.txt.master
+    #   -r src/swift/requirements.txt
+pyjwt==2.13.0
+    # via
+    #   -c upper-constraints.txt.master
+    #   keystonemiddleware
+pyparsing==3.3.2
+    # via
+    #   -c upper-constraints.txt.master
+    #   oslo-utils
+python-dateutil==2.9.0.post0
+    # via
+    #   -c upper-constraints.txt.master
+    #   oslo-log
+python-keystoneclient==5.8.0
+    # via
+    #   -c upper-constraints.txt.master
+    #   ceilometermiddleware
+    #   keystonemiddleware
+pyyaml==6.0.3
+    # via
+    #   -c upper-constraints.txt.master
+    #   oslo-config
+    #   oslo-messaging
+    #   oslo-utils
+repoze-lru==0.8
+    # via
+    #   -c upper-constraints.txt.master
+    #   routes
+requests==2.34.2
+    # via
+    #   -c upper-constraints.txt.master
+    #   -r src/swift/requirements.txt
+    #   keystoneauth1
+    #   keystonemiddleware
+    #   oslo-config
+    #   python-keystoneclient
+rfc3986==2.0.0
+    # via
+    #   -c upper-constraints.txt.master
+    #   oslo-config
+routes==2.5.1
+    # via
+    #   -c upper-constraints.txt.master
+    #   oslo-service
+six==1.17.0
+    # via
+    #   -c upper-constraints.txt.master
+    #   python-dateutil
+    #   routes
+statsd==4.0.1
+    # via
+    #   -c upper-constraints.txt.master
+    #   oslo-middleware
+stevedore==5.9.0
+    # via
+    #   -c upper-constraints.txt.master
+    #   dogpile-cache
+    #   keystoneauth1
+    #   oslo-config
+    #   oslo-messaging
+    #   oslo-middleware
+    #   python-keystoneclient
+typing-extensions==4.15.0
+    # via
+    #   -c upper-constraints.txt.master
+    #   keystoneauth1
+    #   os-service-types
+    #   oslo-context
+    #   oslo-middleware
+tzdata==2026.2
+    # via
+    #   -c upper-constraints.txt.master
+    #   kombu
+urllib3==2.7.0
+    # via
+    #   -c upper-constraints.txt.master
+    #   requests
+vine==5.1.0
+    # via
+    #   -c upper-constraints.txt.master
+    #   amqp
+    #   kombu
+webob==1.8.10
+    # via
+    #   -c upper-constraints.txt.master
+    #   keystonemiddleware
+    #   oslo-messaging
+    #   oslo-middleware
+    #   oslo-service
+wrapt==2.2.2
+    # via
+    #   -c upper-constraints.txt.master
+    #   debtcollector
+xattr==1.3.0 ; sys_platform != "win32"
+    # via
+    #   -c upper-constraints.txt.master
+    #   -r src/swift/requirements.txt
+yappi==1.7.6
+    # via
+    #   -c upper-constraints.txt.master
+    #   oslo-service
+
+# The following packages are considered to be unsafe in a requirements file:

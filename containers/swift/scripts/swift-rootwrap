@@ -1,0 +1,3 @@
+#!/usr/bin/env python3
+from oslo_rootwrap import cmd
+cmd.main()

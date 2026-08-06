@@ -1,0 +1,4 @@
+# Keystone auth_token middleware
+keystonemiddleware
+# Telemetry middleware for Ceilometer integration
+ceilometermiddleware
