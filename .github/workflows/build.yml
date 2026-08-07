@@ -1,42 +1,13 @@
 name: Build images
 
-on:
-  pull_request:
-    branches: [main]
-  push:
-    branches: [main]
-  workflow_dispatch:
+on: [push, pull_request, workflow_dispatch]
 
 jobs:
   build:
-    if: github.event_name != 'push'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.x"
-
-      - name: Install system dependencies
-        run: sudo apt-get update && sudo apt-get install -y buildah podman
-
-      - name: Install tox
-        run: pip install tox
-
-      - name: Build images
-        run: tox -e build
-
-      - name: list images
-        run: podman images
-
-  build-and-push:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     env:
-      REGISTRY_AUTH_FILE: ${{ github.workspace }}/.docker-auth.json
       REGISTRY: quay.io
-      NAMESPACE: amoralej
+      NAMESPACE: openstack-k8s-operators
       TAG: "master-latest,master-${{ github.sha }}"
     steps:
       - uses: actions/checkout@v4
@@ -54,10 +25,5 @@ jobs:
       - name: Build images
         run: tox -e build
 
-      - name: Log in and push images
-        run: |
-          buildah login -u "${{ secrets.QUAY_USERNAME }}" -p "${{ secrets.QUAY_PASSWORD }}" "${REGISTRY}"
-          tox -e custom -- push all
-
-      - name: List images
+      - name: list images
         run: podman images
