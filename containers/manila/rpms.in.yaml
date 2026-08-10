@@ -24,6 +24,7 @@ packages:
   - libffi-devel
   - libxml2-devel
   - libxslt-devel
+  - lvm2
   - mod_ssl
   - openssl-devel
   - python3
@@ -34,4 +35,5 @@ packages:
   - python3-setuptools
   - python3-wheel
   - rust
+  - samba
   - sqlite
