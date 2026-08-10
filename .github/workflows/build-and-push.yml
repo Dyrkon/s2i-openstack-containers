@@ -32,7 +32,5 @@ jobs:
           username: ${{ secrets.QUAY_USERNAME }}
           password: ${{ secrets.QUAY_PASSWORD }}
 
-      # I want to test we are setting the namespace and login properly before pushing
-      # uncomment later
-      #- name: Push images
-      #  run: tox -e custom -- push all
+      - name: Push images
+        run: tox -e custom -- push all
