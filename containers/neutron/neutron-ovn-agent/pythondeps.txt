@@ -1,0 +1,3 @@
+# Additional Python packages not in neutron's requirements.txt
+# Caching backend (dogpile extra for oslo.cache)
+oslo.cache[dogpile]
