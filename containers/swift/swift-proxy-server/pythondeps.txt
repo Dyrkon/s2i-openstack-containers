@@ -1,4 +1,6 @@
 # Keystone auth_token middleware
 keystonemiddleware
+# oslo.cache backend for keystonemiddleware token caching (dogpile driver)
+oslo.cache[dogpile]
 # Telemetry middleware for Ceilometer integration
 ceilometermiddleware

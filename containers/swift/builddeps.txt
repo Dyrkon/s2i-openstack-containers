@@ -11,7 +11,10 @@ libffi-devel
 openssl-devel
 # Required to build pyeclib (erasure coding)
 liberasurecode-devel
-python3-cryptography
+# Required to build xattr
+libattr-devel
+# Pinned to 43.x to match upper-constraints (cryptography==43.0.3); see bindeps.txt
+python3-cryptography-43.0.0-4.el10
 # Required to build lxml
 libxml2-devel
 libxslt-devel
