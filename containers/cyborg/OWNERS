@@ -1,0 +1,16 @@
+# See the OWNERS docs at https://www.kubernetes.dev/docs/guide/owners/
+approvers:
+  - amoralej
+  - SeanMooney
+  - viroel
+  - raukadah
+  - cescgina
+  - rlandy
+
+reviewers:
+  - amoralej
+  - SeanMooney
+  - viroel
+  - raukadah
+  - cescgina
+  - rlandy

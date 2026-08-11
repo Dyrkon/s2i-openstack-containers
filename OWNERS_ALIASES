@@ -1,0 +1,10 @@
+# See the OWNERS_ALIASES docs at https://www.kubernetes.dev/docs/guide/owners/#owners_aliases
+aliases:
+  openstack-approvers:
+    - abays
+    - dprince
+    - stuggi
+  s2i-openstack-approvers:
+    - amoralej
+    - rebtoor
+    - yazug
