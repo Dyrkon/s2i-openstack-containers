@@ -22,6 +22,7 @@ runs:
       if: github.event_name == 'pull_request'
       shell: bash
       run: |
+        set +o pipefail
         services=$(gh pr diff "${{ github.event.pull_request.number }}" --name-only \
           | grep '^containers/' \
           | cut -d/ -f2 \
