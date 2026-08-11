@@ -1,0 +1,8 @@
+# Ceph storage backend (from centos10-storage repo in base image)
+ceph-common
+dbus-tools
+sqlite
+# LVM share backend
+lvm2
+# CIFS share backend
+samba

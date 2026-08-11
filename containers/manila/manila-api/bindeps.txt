@@ -1,0 +1,4 @@
+# Apache WSGI server for manila-api
+httpd
+mod_ssl
+python3-mod_wsgi
