@@ -31,6 +31,9 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ secrets.QUAY_USERNAME }}
           password: ${{ secrets.QUAY_PASSWORD }}
+          auth_file_path: ${{ runner.temp }}/auth.json
 
       - name: Push images
         run: tox -e custom -- push all
+        env:
+          REGISTRY_AUTH_FILE: ${{ runner.temp }}/auth.json
