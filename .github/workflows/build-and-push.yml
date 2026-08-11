@@ -11,6 +11,7 @@ jobs:
     env:
       REGISTRY: quay.io
       NAMESPACE: ${{ secrets.IMAGENAMESPACE }}
+      IMAGE_PREFIX: openstack
       TAG: "master-latest,master-${{ github.sha }}"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -23,7 +24,10 @@ jobs:
         run: tox -e build
 
       - name: list images
-        run: podman images
+        id: built-images
+        run: |
+          podman images
+          echo "repos=$(podman images --format '${{ '{{.Repository}}' }}' | grep "^${REGISTRY}/${NAMESPACE}/${IMAGE_PREFIX}-" | sort -u | tr '\n' ' ')" >> "$GITHUB_OUTPUT"
 
       - name: Log in to Quay
         uses: redhat-actions/podman-login@50c2d9a331bb67c8fdab99b86455fad05e2e3252 # v2
@@ -32,6 +36,31 @@ jobs:
           username: '$oauthtoken'
           password: ${{ secrets.QUAY_OAUTH_TOKEN }}
           auth_file_path: ${{ runner.temp }}/auth.json
+
+      - name: Ensure Quay repositories exist and are public
+        run: |
+          for FULL_REPO in ${{ steps.built-images.outputs.repos }}; do
+            REPO_NAME="${FULL_REPO##*/}"
+            echo "Ensuring repository ${NAMESPACE}/${REPO_NAME} exists..."
+
+            RESPONSE_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "https://${{ env.REGISTRY }}/api/v1/repository" \
+              -H "Authorization: Bearer ${{ secrets.QUAY_OAUTH_TOKEN }}" \
+              -H "Content-Type: application/json" \
+              -d '{
+                "repository": "'"${REPO_NAME}"'",
+                "namespace": "'"${NAMESPACE}"'",
+                "description": "Created automatically via CI",
+                "visibility": "public"
+              }')
+            if [ "$RESPONSE_CODE" -eq 201 ]; then
+              echo "Repository created successfully."
+            elif [ "$RESPONSE_CODE" -eq 400 ]; then
+              echo "Repository already exists, proceeding."
+            else
+              echo "Failed to create repository. API returned HTTP $RESPONSE_CODE"
+              exit 1
+            fi
+          done
 
       - name: Push images
         run: tox -e custom -- push all
