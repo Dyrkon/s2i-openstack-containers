@@ -330,6 +330,24 @@ Two-stage build:
 | `SKIP_HASH_UPDATE` | *(unset)* | If set, `update-sources` skips updating pinned hashes and clones repos at existing pins; lockfiles are still regenerated |
 | `PIP_NO_BINARY` | *(unset)* | If set, passed as `--build-arg` to the container build so pip builds packages from source (e.g., `:all:`) |
 
+## CI path filtering
+
+Workflows use GitHub's native [`on.<event>.paths`](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#onpushpull_requestpull_request_targetpathspaths-ignore)
+filters so unrelated jobs are skipped entirely. Skipped workflows count as
+passing for required branch protection when the workflow file exists on the
+default branch. Linters always run. Manual `workflow_dispatch` runs everything.
+
+| Changed paths | Linters | Unit tests | update-sources | Build / push |
+|---------------|---------|------------|----------------|--------------|
+| Docs only (`*.md`, `LICENSE*`) | run | skip | skip | skip |
+| `containers/<service>/` | run | skip | run | **all** images |
+| `build.sh` | run | run | run | **all** images |
+| `tox.ini` | run | run | skip | **all** images |
+| `tests/`, `hack/` | run | run | skip | skip |
+
+When build or push runs, **all** images are built together so every container
+for a commit shares the same `master-<sha>` tag and consistent OS packages.
+
 ## Adding a new service
 
 1. Create the project directory structure:
