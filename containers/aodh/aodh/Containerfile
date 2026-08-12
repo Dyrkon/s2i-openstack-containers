@@ -56,13 +56,6 @@ RUN pip3 install --no-cache-dir --prefix=/usr \
       --find-links=/wheels/pkgs \
       /wheels/pkgs/*.whl
 
-RUN mkdir -p /configfiles/etc/aodh && \
-    oslo-config-generator \
-      --config-file ${SERVICE_SRC}/etc/aodh/aodh-config-generator.conf \
-      --output-file /configfiles/etc/aodh/aodh.conf && \
-    sed -i "/#pybasedir.*/d" /configfiles/etc/aodh/aodh.conf && \
-    cp -a ${SERVICE_SRC}/aodh/api/api-paste.ini /configfiles/etc/aodh/api-paste.ini
-
 # --- Runtime stage: install from wheels ---
 FROM ${BASE_IMAGE}
 
@@ -92,12 +85,9 @@ RUN mkdir -p /etc/aodh /var/log/aodh /var/lib/aodh /var/lib/aodh/tmp /usr/share/
     chown -R aodh:aodh /var/lib/aodh && \
     chown -R aodh:root /var/log/aodh
 
-COPY --from=build /configfiles/etc/aodh/aodh.conf /etc/aodh/aodh.conf
-COPY --from=build /configfiles/etc/aodh/api-paste.ini /etc/aodh/api-paste.ini
 COPY common/config/usr/share/aodh/aodh-dist.conf /usr/share/aodh/aodh-dist.conf
 
-RUN chmod 640 /etc/aodh/aodh.conf /etc/aodh/api-paste.ini && \
-    chmod 640 /usr/share/aodh/aodh-dist.conf && \
+RUN chmod 640 /usr/share/aodh/aodh-dist.conf && \
     chown -R root:aodh /etc/aodh /usr/share/aodh
 
 # Apache httpd setup for WSGI
