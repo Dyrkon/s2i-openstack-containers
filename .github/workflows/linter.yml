@@ -1,6 +1,15 @@
 name: Linters
 
-on: [push, pull_request, workflow_dispatch]
+on:
+  push:
+    paths-ignore:
+      - '**/OWNERS'
+      - '**/OWNERS_ALIASES'
+  pull_request:
+    paths-ignore:
+      - '**/OWNERS'
+      - '**/OWNERS_ALIASES'
+  workflow_dispatch:
 
 jobs:
   linters:

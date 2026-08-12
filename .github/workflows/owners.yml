@@ -1,0 +1,40 @@
+name: Validate OWNERS
+
+on:
+  pull_request:
+    paths:
+      - '**/OWNERS'
+      - '**/OWNERS_ALIASES'
+  push:
+    paths:
+      - '**/OWNERS'
+      - '**/OWNERS_ALIASES'
+  workflow_dispatch:
+
+jobs:
+  validate-owners:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Validate YAML syntax
+        run: |
+          pip install yamllint
+          find . -name OWNERS -o -name OWNERS_ALIASES | xargs yamllint -d '{extends: default, rules: {line-length: disable, document-start: disable}}'
+
+      - name: Check required keys
+        run: |
+          rc=0
+          for f in $(find . -name OWNERS ! -name OWNERS_ALIASES); do
+            if ! grep -qE '^(approvers|reviewers):' "$f"; then
+              echo "ERROR: $f missing approvers or reviewers key"
+              rc=1
+            fi
+          done
+          for f in $(find . -name OWNERS_ALIASES); do
+            if ! grep -q '^aliases:' "$f"; then
+              echo "ERROR: $f missing aliases key"
+              rc=1
+            fi
+          done
+          exit $rc
