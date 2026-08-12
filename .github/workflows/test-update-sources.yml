@@ -5,10 +5,14 @@ on:
     paths:
       - build.sh
       - containers/**
+      - '!**/OWNERS'
+      - '!**/OWNERS_ALIASES'
   push:
     paths:
       - build.sh
       - containers/**
+      - '!**/OWNERS'
+      - '!**/OWNERS_ALIASES'
   workflow_dispatch:
 
 jobs:

@@ -6,6 +6,8 @@ on:
       - build.sh
       - tox.ini
       - containers/**
+      - '!**/OWNERS'
+      - '!**/OWNERS_ALIASES'
   workflow_dispatch:
 
 jobs:
