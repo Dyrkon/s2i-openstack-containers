@@ -1,0 +1,10 @@
+# See the OWNERS docs at https://www.kubernetes.dev/docs/guide/owners/
+approvers:
+  - averdagu
+  - karelyatin
+  - slawqo
+
+reviewers:
+  - averdagu
+  - karelyatin
+  - slawqo

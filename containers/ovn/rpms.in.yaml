@@ -1,0 +1,23 @@
+contentOrigin:
+  repofiles:
+    - ./rpms.repo
+context:
+  bare: true
+
+#
+# To update rpms.lock.yaml:
+#    rpm-lockfile-prototype rpms.in.yaml
+#
+
+arches:
+  - x86_64
+  - aarch64
+
+packages:
+  - openvswitch
+  - openvswitch-ovn-central
+  - openvswitch-ovn-common
+  - openvswitch-ovn-host
+  - python3-netifaces
+  - python3-openvswitch
+  - tcpdump

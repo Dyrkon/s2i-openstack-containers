@@ -1,0 +1,8 @@
+# Open vSwitch / OVN common runtime packages
+openvswitch
+openvswitch-ovn-common
+python3-netifaces
+python3-openvswitch
+tcpdump
+# ovn-northd translates the northbound DB into the southbound DB
+openvswitch-ovn-central

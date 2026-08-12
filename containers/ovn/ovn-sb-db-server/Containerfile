@@ -1,0 +1,16 @@
+ARG BASE_IMAGE=localhost/openstack/openstack-base:latest
+
+# RPM-only image: no Python source is built, packages come from the
+# distro/OVN repos already enabled in the base image's rpms.repo.
+FROM ${BASE_IMAGE}
+
+LABEL summary="OVN southbound DB server" \
+      io.k8s.description="ovsdb-server for the OVN southbound DB with kolla interface"
+
+COPY ovn-sb-db-server/bindeps.txt /tmp/bindeps.txt
+RUN pkgs=$(cat /tmp/bindeps.txt | grep -v '^#' | grep -v '^$' | tr '\n' ' ') && \
+    if [ -n "${pkgs}" ]; then microdnf -y install ${pkgs} && microdnf clean all; fi && \
+    rm /tmp/bindeps.txt
+
+COPY ovn-sb-db-server/scripts/start-sb-db-server /usr/local/bin/start-sb-db-server
+RUN chmod 755 /usr/local/bin/start-sb-db-server
