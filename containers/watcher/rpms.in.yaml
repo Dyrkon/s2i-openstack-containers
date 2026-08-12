@@ -19,8 +19,11 @@ packages:
   - gcc-c++
   - git-core
   - httpd
+  - libffi
   - libffi-devel
+  - libxml2
   - libxml2-devel
+  - libxslt
   - libxslt-devel
   - mod_ssl
   - openssl-devel
