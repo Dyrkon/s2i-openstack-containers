@@ -1,0 +1,32 @@
+ARG BASE_IMAGE=localhost/openstack/openstack-base:latest
+FROM ${BASE_IMAGE}
+
+LABEL summary="OpenStack Ansible Test" \
+      io.k8s.description="Ansible test runner for feature verification testing with kolla interface"
+
+ARG CONSTRAINTS_FILE=requirements.lock
+COPY ${CONSTRAINTS_FILE} /deps-upper-constraints.txt
+
+RUN uid_gid_manage ansible
+
+COPY ansible-test/bindeps.txt /tmp/bindeps.txt
+RUN pkgs=$(cat /tmp/bindeps.txt | grep -v '^#' | grep -v '^$' | tr '\n' ' ') && \
+    if [ -n "${pkgs}" ]; then microdnf -y install ${pkgs} && microdnf clean all && rm -rf /var/cache/dnf; fi && \
+    rm /tmp/bindeps.txt
+
+COPY ansible-test/pythondeps.txt /tmp/pythondeps.txt
+RUN extrapkgs=$(cat /tmp/pythondeps.txt | grep -v '^#' | grep -v '^$' | tr '\n' ' ') && \
+    pip3 install --no-cache-dir --prefix=/usr -c /deps-upper-constraints.txt ${extrapkgs} && \
+    rm -rf /tmp/pythondeps.txt
+
+COPY ansible-test/config/etc/sudoers.d/ansible_sudoers /etc/sudoers.d/ansible_sudoers
+RUN chmod 750 /etc/sudoers.d && \
+    chmod 440 /etc/sudoers.d/ansible_sudoers
+
+COPY ansible-test/scripts/run_ansible.sh /usr/local/bin/run_ansible.sh
+RUN chmod +x /usr/local/bin/run_ansible.sh && \
+    mkdir -p /var/lib/ansible && \
+    chown -R ansible:ansible /var/lib/ansible
+
+ENTRYPOINT ["/usr/local/bin/run_ansible.sh"]
+USER ansible
