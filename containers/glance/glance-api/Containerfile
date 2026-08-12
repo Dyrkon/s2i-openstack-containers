@@ -40,10 +40,9 @@ RUN for pkg in /src/*/ /src/overrides/*/; do \
       fi; \
     done
 
-RUN pip3 wheel --no-cache-dir \
-      -c /deps-upper-constraints.txt \
+RUN pip3 wheel --no-cache-dir --no-deps \
       --find-links=/wheels/pkgs \
-      --wheel-dir=/wheels/deps /wheels/pkgs/*.whl
+      --wheel-dir=/wheels/deps -r /deps-upper-constraints.txt
 
 RUN for src_dir in /src/*/ /src/overrides/*/; do \
       if [ -d "${src_dir}" ] && [ -f "${src_dir}/setup.cfg" ]; then \
