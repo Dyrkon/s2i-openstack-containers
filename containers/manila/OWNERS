@@ -1,0 +1,10 @@
+# See the OWNERS docs at https://www.kubernetes.dev/docs/guide/owners/
+approvers:
+  - fmount
+  - gouthampacha
+  - silvacarloss
+
+reviewers:
+  - fmount
+  - gouthampacha
+  - silvacarloss
