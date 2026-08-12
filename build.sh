@@ -533,11 +533,11 @@ update_sources_file() {
   done < "${sources_file}"
 
   if [[ ${updated} -eq 1 ]]; then
-    mv "${tmp_file}" "${sources_file}"
+    install -m 644 "${tmp_file}" "${sources_file}"
   else
-    rm "${tmp_file}"
     echo "  (no changes)"
   fi
+  rm "${tmp_file}"
 }
 
 # Collect Python package names provided via RPMs from bindeps.txt and
@@ -614,7 +614,8 @@ filter_lockfile_rpm_packages() {
   /^[ \t]/ { if (!skip) print; next }
   { skip = 0; print }
   ' "${lockfile}" > "${tmp}"
-  mv "${tmp}" "${lockfile}"
+  install -m 644 "${tmp}" "${lockfile}"
+  rm "${tmp}"
 }
 
 # Generate a single requirements.lock for a project by running pip-compile
