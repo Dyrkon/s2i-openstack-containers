@@ -3,6 +3,10 @@ name: Build and push images
 on:
   push:
     branches: [main]
+    paths:
+      - build.sh
+      - tox.ini
+      - containers/**
   workflow_dispatch:
 
 jobs:

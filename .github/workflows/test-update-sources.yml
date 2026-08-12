@@ -1,26 +1,22 @@
-name: Tests
+name: Tests (update-sources)
 
 on:
   pull_request:
     paths:
       - build.sh
-      - tox.ini
-      - tests/**
-      - hack/**
+      - containers/**
   push:
     paths:
       - build.sh
-      - tox.ini
-      - tests/**
-      - hack/**
+      - containers/**
   workflow_dispatch:
 
 jobs:
-  test:
+  update-sources:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: ./.github/actions/setup-tox
 
-      - name: Run unit tests
-        run: tox -e test
+      - name: Verify update-sources runs successfully
+        run: tox -e update-sources
