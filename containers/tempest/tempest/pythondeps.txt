@@ -1,0 +1,2 @@
+# All plugins are built from source via sources.txt and installed as wheels.
+# No additional pip-only deps needed.

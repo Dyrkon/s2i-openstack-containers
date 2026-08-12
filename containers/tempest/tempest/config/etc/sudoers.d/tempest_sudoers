@@ -1,0 +1,3 @@
+# Sourced from openstack-k8s-operators/tcib@e44632ba2b17dbf0fe978febd9ab402663cbc124
+# container-images/tcib/base/os/tempest/tempest_sudoers
+tempest        ALL=(ALL)       NOPASSWD: ALL

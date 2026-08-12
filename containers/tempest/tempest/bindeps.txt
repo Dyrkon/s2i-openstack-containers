@@ -1,0 +1,24 @@
+python3
+python3-pip
+# NOTE: python3-cryptography is intentionally NOT installed via RPM here.
+# The el10 RPM ships cryptography 49.x, but pyOpenSSL 24.2.1 (pinned by
+# OpenStack upper-constraints) requires cryptography<44. Installing the RPM
+# causes two .so files to coexist (_rust.abi3.so from pip 43.x and
+# _rust.cpython-312.so from RPM 49.x); Python 3.12 prefers the cpython-312
+# variant, which lacks symbols the pip 43.x Python code expects (e.g.
+# check_ansix923_padding), producing an ImportError at runtime.
+# pip manages cryptography 43.x exclusively, keeping the .so and Python
+# files in sync. Remove this note and re-add python3-cryptography once
+# pyOpenSSL is updated to >= 25.0 (which drops the cryptography<44 cap).
+# Required to parse and generate subunit streams
+python3-subunit
+# Filters for subunit output (subunit2junitxml, subunit2html)
+subunit-filters
+# Used to upload test images to Glance during test setup
+qemu-img
+# Network diagnostics (ping) used by some tempest tests
+iputils
+# For cloning external tempest plugins at runtime via run_tempest.sh
+git-core
+# For extracting timing data archives (TEMPEST_TIMING_DATA_URL)
+tar
