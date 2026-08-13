@@ -1,0 +1,11 @@
+osc-placement
+python-barbicanclient
+python-designateclient
+python-glanceclient
+python-heatclient
+python-ironicclient
+python-ironic-inspector-client
+python-octaviaclient
+aodhclient
+python-watcherclient
+python-cloudkittyclient
