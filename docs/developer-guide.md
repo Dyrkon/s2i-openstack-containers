@@ -152,8 +152,9 @@ for packages shared across all service images.
 
 ## Auto-generated files
 
-These files are created and updated by `build.sh update-sources`. They
-should be committed to the repository but never edited by hand.
+These files are created by `build.sh update-sources` and refreshed by
+`build.sh update-lockfiles`. They should be committed to the repository
+but never edited by hand.
 
 | File | Location | Generated from |
 |------|----------|----------------|
@@ -174,11 +175,12 @@ upper-constraints.txt -> upper-constraints.txt.master
 These symlinks allow Containerfiles to use `ARG CONSTRAINTS_FILE=requirements.lock`
 without needing to know which stream is active.
 
-**Important:** Whenever you modify `sources.txt`, `pythondeps.txt`,
-`pythonbuilddeps.txt`, `bindeps.txt`, or `builddeps.txt`, you must re-run
-`build.sh update-sources` (or `tox -e update-sources`) to regenerate the
-lockfile, constraints, and `rpms.in.yaml`. Failing to do so will cause
-builds to use stale dependency pins.
+**Important:** Whenever you modify `pythondeps.txt`, `pythonbuilddeps.txt`,
+`bindeps.txt`, or `builddeps.txt`, you must re-run
+`build.sh update-lockfiles` (or `tox -e update-lockfiles`) to regenerate the
+lockfiles and `rpms.in.yaml`. If you modify `sources.txt`, use
+`build.sh update-sources` instead (it also regenerates lockfiles).
+Failing to do so will cause builds to use stale dependency pins.
 
 ## Prerequisites
 
@@ -218,12 +220,17 @@ through all relevant environment variables (`STREAM`, `REGISTRY`, `TAG`, etc.):
 # Update sources for all projects
 STREAM=master tox -eupdate-sources
 
+# Regenerate lockfiles after modifying dependency files
+STREAM=master tox -eupdate-lockfiles
+STREAM=master tox -eupdate-lockfiles -- cinder
+
 # Build all images
 STREAM=master tox -ebuild
+STREAM=master tox -ebuild -- manila
 
 # Run any build.sh command via the generic 'custom' target
 STREAM=master tox -ecustom -- update-sources watcher
-STREAM=stable tox -ecustom -- build watcher/watcher-api
+STREAM=stable tox -ecustom -- build watcher/watcher-base
 tox -ecustom -- list
 ```
 
@@ -253,12 +260,7 @@ Auto-cloned repos in `src/` are cleaned up automatically on exit.
 Pre-existing checkouts in `src/` are used as-is and not removed.
 
 To regenerate lockfiles without updating pinned hashes (steps 1--3 are
-skipped; repos are cloned at the existing pinned hashes instead), use the
-canonical Python 3.12 environment:
-
-```bash
-STREAM=master uvx --python 3.12 tox -e update-lockfiles -- <project-or-all>
-```
+skipped), see the **Updating lockfiles** section below.
 
 Python environment markers are evaluated by the generator interpreter, so
 other Python minor versions can produce a different dependency set. The tox
@@ -266,6 +268,50 @@ environment rejects non-3.12 interpreters and pins the generator tool versions.
 Generated lock headers, resolver annotations, and package-index directives are
 removed because they describe the generation environment rather than the
 resolved dependency set.
+
+### Updating lockfiles (after modifying dependency files)
+
+**When to use:** After you add, remove, or change any entry in
+`pythondeps.txt`, `pythonbuilddeps.txt`, `bindeps.txt`, or `builddeps.txt`,
+run `update-lockfiles` to regenerate the lockfiles and `rpms.in.yaml`.
+Unlike `update-sources`, this command does **not** clone any upstream repos
+and does **not** modify `sources.txt` -- it only refreshes the generated
+files using the existing constraints and lockfile as inputs.
+
+```bash
+STREAM=master ./build.sh update-lockfiles <project-or-all>
+```
+
+Or via tox:
+
+```bash
+STREAM=master uvx --python 3.12 tox -eupdate-lockfiles
+STREAM=master uvx --python 3.12 tox -eupdate-lockfiles -- watcher
+```
+
+This will:
+1. Generate `rpms.in.yaml` from all `bindeps.txt` + `builddeps.txt` files.
+2. Regenerate `requirements.lock.<stream>` using the existing lockfile plus
+   any `pythondeps.txt` / `pythonbuilddeps.txt` files, constrained by
+   `upper-constraints.txt.<stream>`.
+3. Regenerate `buildrequirements.lock.<stream>` via `pybuild-deps compile`.
+4. Create default-stream symlinks if `STREAM == DEFAULT_STREAM`.
+
+**Requirements:** The project must have been through `update-sources` at
+least once so that `upper-constraints.txt.<stream>` and
+`requirements.lock.<stream>` already exist.
+
+For pure RPM projects (no `sources.txt` -- see below), `update-lockfiles`
+only regenerates `rpms.in.yaml` and skips lockfile generation.
+
+### Pure RPM projects
+
+Projects that have no `sources.txt` are treated as pure RPM-based images.
+They have no Python source repos, no upper-constraints, and no lockfiles.
+Both `update-sources` and `update-lockfiles` will still generate
+`rpms.in.yaml` from their `bindeps.txt` and `builddeps.txt` files, but
+skip all lockfile-related steps. Builds for these projects skip source
+cloning and constraints entirely.
 
 ### Building images
 
