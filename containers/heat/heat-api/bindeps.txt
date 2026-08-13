@@ -1,0 +1,4 @@
+# API WSGI runtime on httpd
+httpd
+mod_ssl
+python3-mod_wsgi
