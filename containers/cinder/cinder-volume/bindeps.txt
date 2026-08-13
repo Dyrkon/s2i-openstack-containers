@@ -1,0 +1,4 @@
+# iSCSI target support
+iscsi-initiator-utils
+# Ceph RBD support (from centos10-storage repo in base image)
+ceph-common

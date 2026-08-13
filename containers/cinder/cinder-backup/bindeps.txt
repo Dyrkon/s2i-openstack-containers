@@ -1,0 +1,2 @@
+# Ceph RBD support
+ceph-common
