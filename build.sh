@@ -310,6 +310,16 @@ build_image() {
     return 1
   fi
 
+  # Pure RPM project: no sources to clone, no constraints needed
+  if [[ ! -f "${CONTAINERS_DIR}/${project}/sources.txt" ]]; then
+    buildah bud \
+      $(image_tag_args "${dir_name}") \
+      --build-arg "BASE_IMAGE=${BASE_IMAGE}" \
+      -f "${CONTAINERS_DIR}/${dir_name}/Containerfile" \
+      "${CONTAINERS_DIR}/${project}/"
+    return
+  fi
+
   # Clone sources for this stream
   ensure_sources_for_stream "${dir_name}" "${STREAM}"
 
@@ -648,6 +658,11 @@ generate_requirements_lock() {
   local project_dir="${CONTAINERS_DIR}/${project}"
   local constraints_file="${project_dir}/${UPSTREAM_CONSTRAINTS}.${stream}"
 
+  if [[ ! -f "${project_dir}/sources.txt" ]]; then
+    echo "--- Skipping lockfile for ${project} (pure RPM project, no sources.txt) ---"
+    return
+  fi
+
   if [[ ! -f "${constraints_file}" ]]; then
     echo "WARNING: No constraints file at ${constraints_file}, skipping lock for ${project}" >&2
     return
@@ -749,6 +764,11 @@ generate_buildrequirements_lock() {
   local lock_file="${project_dir}/${CONSTRAINTS_FILE}.${stream}"
   local build_lock_file="${BUILD_CONSTRAINTS_FILE}.${stream}"
 
+  if [[ ! -f "${project_dir}/sources.txt" ]]; then
+    echo "--- Skipping lockfile for ${project} (pure RPM project, no sources.txt) ---"
+    return
+  fi
+
   if [[ ! -f "${lock_file}" ]]; then
     echo "WARNING: No ${lock_file} found, skipping build lock for ${project}" >&2
     return
@@ -802,6 +822,11 @@ regenerate_requirements_lock() {
   local constraints_file="${project_dir}/${UPSTREAM_CONSTRAINTS}.${stream}"
   local lock_file="${CONSTRAINTS_FILE}.${stream}"
   local lock_path="${project_dir}/${lock_file}"
+
+  if [[ ! -f "${project_dir}/sources.txt" ]]; then
+    echo "--- Skipping lockfile for ${project} (pure RPM project, no sources.txt) ---"
+    return
+  fi
 
   if [[ ! -f "${constraints_file}" ]]; then
     echo "ERROR: No ${constraints_file} found for ${project}." >&2

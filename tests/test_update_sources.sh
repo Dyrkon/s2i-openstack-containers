@@ -230,6 +230,13 @@ EOF
   echo "gcc"          > "${TEST_DIR}/containers/test-svc3/test-svc3/builddeps.txt"
   touch                 "${TEST_DIR}/containers/test-svc3/test-svc3/pythondeps.txt"
   touch                 "${TEST_DIR}/containers/test-svc3/test-svc3/pythonbuilddeps.txt"
+
+  # ── Pure RPM project (no sources.txt) ──
+  mkdir -p "${TEST_DIR}/containers/test-rpmsvc/test-rpmsvc"
+
+  echo "FROM scratch"   > "${TEST_DIR}/containers/test-rpmsvc/test-rpmsvc/Containerfile"
+  echo "httpd"          > "${TEST_DIR}/containers/test-rpmsvc/test-rpmsvc/bindeps.txt"
+  echo "gcc-c++"        > "${TEST_DIR}/containers/test-rpmsvc/test-rpmsvc/builddeps.txt"
 }
 
 _teardown_fixture() {
@@ -631,6 +638,55 @@ test_update_lockfiles_generates_rpms_in() {
   assert_grep "gcc" "${TEST_DIR}/containers/test-svc/rpms.in.yaml"
 }
 
+# ── Pure RPM project tests ──────────────────────────────────────────────
+
+test_update_sources_pure_rpm_generates_rpms_in() {
+  _run_cmd STREAM=master -- update-sources test-rpmsvc
+
+  local rpms="${TEST_DIR}/containers/test-rpmsvc/rpms.in.yaml"
+  assert_file_exists "${rpms}"
+  assert_grep "httpd" "${rpms}"
+  assert_grep "gcc-c++" "${rpms}"
+}
+
+test_update_sources_pure_rpm_skips_lockfiles() {
+  _run_cmd STREAM=master -- update-sources test-rpmsvc
+
+  assert "no lockfile for pure RPM project" \
+    test ! -f "${TEST_DIR}/containers/test-rpmsvc/requirements.lock.master"
+  assert "no build lockfile for pure RPM project" \
+    test ! -f "${TEST_DIR}/containers/test-rpmsvc/buildrequirements.lock.master"
+  assert_grep "pure RPM project" "${TEST_DIR}/build.log"
+}
+
+test_update_lockfiles_pure_rpm_generates_rpms_in() {
+  _run_cmd STREAM=master -- update-lockfiles test-rpmsvc
+
+  local rpms="${TEST_DIR}/containers/test-rpmsvc/rpms.in.yaml"
+  assert_file_exists "${rpms}"
+  assert_grep "httpd" "${rpms}"
+  assert_grep "gcc-c++" "${rpms}"
+}
+
+test_update_lockfiles_pure_rpm_skips_lockfiles() {
+  _run_cmd STREAM=master -- update-lockfiles test-rpmsvc
+
+  assert "no lockfile for pure RPM project" \
+    test ! -f "${TEST_DIR}/containers/test-rpmsvc/requirements.lock.master"
+  assert "no build lockfile for pure RPM project" \
+    test ! -f "${TEST_DIR}/containers/test-rpmsvc/buildrequirements.lock.master"
+  assert_grep "pure RPM project" "${TEST_DIR}/build.log"
+}
+
+test_update_sources_all_includes_pure_rpm() {
+  _run_cmd STREAM=master -- update-sources all
+
+  assert_file_exists "${TEST_DIR}/containers/test-rpmsvc/rpms.in.yaml"
+  assert_grep "httpd" "${TEST_DIR}/containers/test-rpmsvc/rpms.in.yaml"
+  assert "no lockfile for pure RPM project" \
+    test ! -f "${TEST_DIR}/containers/test-rpmsvc/requirements.lock.master"
+}
+
 # ── Run all tests ────────────────────────────────────────────────────────
 
 echo "=== update-sources tests ==="
@@ -669,6 +725,11 @@ TESTS=(
   test_update_lockfiles_multiple_targets
   test_update_lockfiles_creates_symlinks
   test_update_lockfiles_generates_rpms_in
+  test_update_sources_pure_rpm_generates_rpms_in
+  test_update_sources_pure_rpm_skips_lockfiles
+  test_update_lockfiles_pure_rpm_generates_rpms_in
+  test_update_lockfiles_pure_rpm_skips_lockfiles
+  test_update_sources_all_includes_pure_rpm
 )
 
 for t in "${TESTS[@]}"; do
