@@ -63,6 +63,7 @@ cliff==4.15.0
     #   python-barbicanclient
     #   python-heatclient
     #   python-neutronclient
+    #   python-openstackclient
     #   stestr
     #   tempest
 cmd2==4.0.0
@@ -83,6 +84,7 @@ cryptography==43.0.3
     #   openstacksdk
     #   paramiko
     #   pyopenssl
+    #   python-openstackclient
     #   tempest
 ddt==1.7.2
     # via
@@ -103,6 +105,7 @@ debtcollector==3.1.0
     #   oslo-messaging
     #   oslo-service
     #   python-keystoneclient
+    #   python-manilaclient
     #   python-neutronclient
     #   tempest
 decorator==5.3.1
@@ -213,6 +216,7 @@ iso8601==2.1.0
     #   oslo-utils
     #   python-heatclient
     #   python-novaclient
+    #   python-openstackclient
     #   python-subunit
 jinja2==3.1.6
     # via
@@ -259,6 +263,7 @@ keystoneauth1==5.15.0
     #   python-cinderclient
     #   python-heatclient
     #   python-keystoneclient
+    #   python-manilaclient
     #   python-neutronclient
     #   python-novaclient
     #   python-zaqarclient
@@ -325,6 +330,7 @@ openstacksdk==4.18.0
     #   -r src/python-tempestconf/requirements.txt
     #   osc-lib
     #   python-neutronclient
+    #   python-openstackclient
 os-collect-config==14.0.1
     # via
     #   -c upper-constraints.txt.master
@@ -339,6 +345,10 @@ os-service-types==1.9.0
     #   -c upper-constraints.txt.master
     #   keystoneauth1
     #   openstacksdk
+os-testr==3.0.0
+    # via
+    #   -c upper-constraints.txt.master
+    #   -r tempest/pythondeps.txt
 os-traits==3.8.0
     # via
     #   -c upper-constraints.txt.master
@@ -348,7 +358,9 @@ osc-lib==4.7.0
     # via
     #   -c upper-constraints.txt.master
     #   python-heatclient
+    #   python-manilaclient
     #   python-neutronclient
+    #   python-openstackclient
     #   python-zaqarclient
 oslo-concurrency==7.6.1
     # via
@@ -389,6 +401,7 @@ oslo-config==10.6.0
     #   oslo-versionedobjects
     #   osprofiler
     #   python-keystoneclient
+    #   python-manilaclient
     #   tempest
 oslo-context==6.5.0
     # via
@@ -423,6 +436,7 @@ oslo-i18n==6.9.0
     #   python-keystoneclient
     #   python-neutronclient
     #   python-novaclient
+    #   python-openstackclient
     #   python-zaqarclient
 oslo-log==8.3.0
     # via
@@ -440,6 +454,7 @@ oslo-log==8.3.0
     #   oslo-metrics
     #   oslo-service
     #   oslo-versionedobjects
+    #   python-manilaclient
     #   python-neutronclient
     #   python-zaqarclient
     #   tempest
@@ -481,6 +496,7 @@ oslo-serialization==5.11.0
     #   python-barbicanclient
     #   python-heatclient
     #   python-keystoneclient
+    #   python-manilaclient
     #   python-neutronclient
     #   python-novaclient
     #   tempest
@@ -518,6 +534,7 @@ oslo-utils==10.1.1
     #   python-cinderclient
     #   python-heatclient
     #   python-keystoneclient
+    #   python-manilaclient
     #   python-neutronclient
     #   python-novaclient
     #   python-zaqarclient
@@ -594,6 +611,7 @@ pbr==7.0.3
     #   os-collect-config
     #   os-ken
     #   os-service-types
+    #   os-testr
     #   os-traits
     #   osc-lib
     #   oslo-concurrency
@@ -609,6 +627,7 @@ pbr==7.0.3
     #   python-cinderclient
     #   python-heatclient
     #   python-keystoneclient
+    #   python-manilaclient
     #   python-neutronclient
     #   python-novaclient
     #   python-zaqarclient
@@ -633,6 +652,7 @@ prettytable==3.18.0
     #   osprofiler
     #   python-cinderclient
     #   python-heatclient
+    #   python-manilaclient
     #   python-novaclient
     #   tempest
 prometheus-client==0.25.0
@@ -702,6 +722,11 @@ python-keystoneclient==5.8.0
     #   -r src/cloudkitty-tempest-plugin/requirements.txt
     #   os-collect-config
     #   python-neutronclient
+    #   python-openstackclient
+python-manilaclient==6.2.0
+    # via
+    #   -c upper-constraints.txt.master
+    #   python-openstackclient
 python-neutronclient==13.0.0
     # via
     #   -c upper-constraints.txt.master
@@ -711,10 +736,15 @@ python-novaclient==18.13.0
     # via
     #   -c upper-constraints.txt.master
     #   -r src/heat-tempest-plugin/requirements.txt
+python-openstackclient==10.2.1
+    # via
+    #   -c upper-constraints.txt.master
+    #   -r tempest/pythondeps.txt
 python-subunit==1.4.6
     # via
     #   -c upper-constraints.txt.master
     #   -r src/tempest/requirements.txt
+    #   os-testr
     #   stestr
     #   tempest
 python-swiftclient==4.10.0
@@ -769,7 +799,9 @@ requests==2.34.2
     #   python-cinderclient
     #   python-heatclient
     #   python-keystoneclient
+    #   python-manilaclient
     #   python-neutronclient
+    #   python-openstackclient
     #   python-swiftclient
     #   python-zaqarclient
 rfc3986==2.0.0
@@ -841,6 +873,7 @@ stevedore==5.9.0
     #   python-cinderclient
     #   python-keystoneclient
     #   python-novaclient
+    #   python-openstackclient
     #   python-zaqarclient
     #   tempest
 tempest==46.3.0
@@ -890,6 +923,7 @@ testtools==2.9.1
     #   -r src/octavia-tempest-plugin/requirements.txt
     #   -r src/telemetry-tempest-plugin/requirements.txt
     #   -r src/tempest/requirements.txt
+    #   os-testr
     #   oslotest
     #   python-subunit
     #   stestr

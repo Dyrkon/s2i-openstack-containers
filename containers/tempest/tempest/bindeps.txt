@@ -1,5 +1,10 @@
 python3
 python3-pip
+# Required to compile Python C extensions in the run_git_tempest venv
+# (e.g. netifaces needed by whitebox-neutron-tempest-plugin)
+gcc
+gcc-c++
+python3-devel
 # NOTE: python3-cryptography is intentionally NOT installed via RPM here.
 # The el10 RPM ships cryptography 49.x, but pyOpenSSL 24.2.1 (pinned by
 # OpenStack upper-constraints) requires cryptography<44. Installing the RPM
@@ -12,7 +17,7 @@ python3-pip
 # pyOpenSSL is updated to >= 25.0 (which drops the cryptography<44 cap).
 # Required to parse and generate subunit streams
 python3-subunit
-# Filters for subunit output (subunit2junitxml, subunit2html)
+# Filters for subunit output (subunit2junitxml); subunit2html comes from os-testr (pip)
 subunit-filters
 # Used to upload test images to Glance during test setup
 qemu-img
