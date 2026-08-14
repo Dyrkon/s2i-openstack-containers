@@ -1,0 +1,22 @@
+python3
+python3-pip
+# Required to compile Python C extensions in the run_git_tempest venv
+# (e.g. netifaces needed by whitebox-neutron-tempest-plugin)
+gcc
+gcc-c++
+python3-devel
+# Pinned to 43.x to match upper-constraints.txt (cryptography==43.0.3).
+# The default el10 RPM ships 49.x which conflicts with pyOpenSSL 24.2.1
+# (requires cryptography<44), causing an ImportError at runtime. Bump this
+# pin once pyOpenSSL >= 25.0 lands in upper-constraints (drops the <44 cap).
+python3-cryptography-43.0.0-4.el10
+# Used to upload test images to Glance during test setup
+qemu-img
+# Network diagnostics (ping) used by some tempest tests
+iputils
+# ip command used by neutron tempest plugin (not in UBI base)
+iproute
+# For cloning external tempest plugins at runtime via run_tempest.sh
+git-core
+# For extracting timing data archives (TEMPEST_TIMING_DATA_URL)
+tar

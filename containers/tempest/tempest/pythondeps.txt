@@ -1,0 +1,5 @@
+# All plugins are built from source via sources.txt and installed as wheels.
+# OpenStack CLI used by run_tempest.sh (image/flavor management, cleanup)
+python-openstackclient
+# Provides subunit2html used by run_tempest.sh to generate HTML test reports
+os-testr
