@@ -1,0 +1,13 @@
+# Compiler toolchain and headers for building Python C extensions
+git-core
+gcc
+gcc-c++
+python3-devel
+python3-setuptools
+libffi-devel
+openssl-devel
+python3-cryptography-43.0.0-4.el10
+# To build bcrypt from source
+rust
+# To build rpds-py from source
+cargo

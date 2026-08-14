@@ -1,0 +1,20 @@
+# OpenStack Designate DNS backend (BIND9)
+#
+# This image runs a plain BIND9 DNS server, used as a Designate pool backend.
+# It contains no Designate Python code, so it does not use the multi-stage
+# source-build pipeline that the other Designate images use.
+
+ARG BASE_IMAGE=localhost/openstack/openstack-base:latest
+
+FROM ${BASE_IMAGE}
+
+LABEL summary="OpenStack Designate DNS backend (BIND9)" \
+      io.k8s.description="BIND9 DNS server used as a Designate pool backend, with the kolla interface"
+
+COPY designate-backend-bind9/bindeps.txt /tmp/bindeps.txt
+RUN pkgs=$(cat /tmp/bindeps.txt | grep -v '^#' | grep -v '^$' | tr '\n' ' ') && \
+    if [ -n "${pkgs}" ]; then microdnf -y install ${pkgs} && microdnf clean all; fi && rm /tmp/bindeps.txt
+
+RUN mkdir -p /var/lib/named /run/named && \
+    chown -R root:root /var/lib/named /run/named && \
+    chmod 755 /run/named

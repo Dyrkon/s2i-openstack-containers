@@ -1,0 +1,3 @@
+# central, mdns, producer, sink, worker runtime
+# worker's bind9 backend driver needs rndc/nsupdate to manage the DNS server
+bind
