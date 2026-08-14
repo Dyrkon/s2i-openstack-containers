@@ -18,6 +18,7 @@ packages:
   - gcc
   - gcc-c++
   - git-core
+  - iproute
   - iputils
   - libffi-devel
   - openssl-devel

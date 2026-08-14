@@ -14,6 +14,8 @@ python3-cryptography-43.0.0-4.el10
 qemu-img
 # Network diagnostics (ping) used by some tempest tests
 iputils
+# ip command used by neutron tempest plugin (not in UBI base)
+iproute
 # For cloning external tempest plugins at runtime via run_tempest.sh
 git-core
 # For extracting timing data archives (TEMPEST_TIMING_DATA_URL)
