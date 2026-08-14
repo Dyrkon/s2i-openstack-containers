@@ -1,2 +1,1 @@
-master upper-constraints https://opendev.org/openstack/requirements.git master 377f367109c44aaaefc73aa8776e314810e3ad37
-master openstackclient https://opendev.org/openstack/python-openstackclient.git master 01668c8b1ce3bd5ad633d2ff849755908c30ab7e
+master upper-constraints https://opendev.org/openstack/requirements.git master b79ae30778228441fe49b61fc51b0ff2f440546c

@@ -1,6 +1,6 @@
 #
 #
-#    pip-compile --allow-unsafe --constraint=upper-constraints.txt.master --output-file=requirements.lock.master --strip-extras openstackclient/pythonbuilddeps.txt openstackclient/pythondeps.txt src/openstackclient/requirements.txt
+#    pip-compile --allow-unsafe --constraint=upper-constraints.txt.master --output-file=requirements.lock.master --strip-extras openstackclient/pythonbuilddeps.txt openstackclient/pythondeps.txt
 #
 aodhclient==3.11.0
     # via
@@ -28,7 +28,6 @@ charset-normalizer==3.4.7
 cliff==4.15.0
     # via
     #   -c upper-constraints.txt.master
-    #   -r src/openstackclient/requirements.txt
     #   aodhclient
     #   osc-lib
     #   python-barbicanclient
@@ -44,13 +43,6 @@ cmd2==4.0.0
     # via
     #   -c upper-constraints.txt.master
     #   cliff
-cryptography==43.0.3
-    # via
-    #   -c upper-constraints.txt.master
-    #   -r src/openstackclient/requirements.txt
-    #   openstacksdk
-    #   pyopenssl
-    #   python-openstackclient
 debtcollector==3.1.0
     # via
     #   -c upper-constraints.txt.master
@@ -81,7 +73,6 @@ idna==3.18
 iso8601==2.1.0
     # via
     #   -c upper-constraints.txt.master
-    #   -r src/openstackclient/requirements.txt
     #   keystoneauth1
     #   openstacksdk
     #   oslo-utils
@@ -157,7 +148,6 @@ netaddr==1.3.0
 openstacksdk==4.18.0
     # via
     #   -c upper-constraints.txt.master
-    #   -r src/openstackclient/requirements.txt
     #   osc-lib
     #   python-cloudkittyclient
     #   python-ironicclient
@@ -170,7 +160,6 @@ os-service-types==1.9.0
 osc-lib==4.7.0
     # via
     #   -c upper-constraints.txt.master
-    #   -r src/openstackclient/requirements.txt
     #   aodhclient
     #   osc-placement
     #   python-cloudkittyclient
@@ -189,7 +178,7 @@ oslo-concurrency==7.6.1
     # via
     #   -c upper-constraints.txt.master
     #   osprofiler
-oslo-config==10.6.0
+oslo-config==10.7.0
     # via
     #   -c upper-constraints.txt.master
     #   oslo-concurrency
@@ -204,7 +193,6 @@ oslo-context==6.5.0
 oslo-i18n==6.9.0
     # via
     #   -c upper-constraints.txt.master
-    #   -r src/openstackclient/requirements.txt
     #   aodhclient
     #   osc-lib
     #   oslo-concurrency
@@ -373,12 +361,10 @@ python-ironicclient==6.2.0
 python-keystoneclient==5.8.0
     # via
     #   -c upper-constraints.txt.master
-    #   -r src/openstackclient/requirements.txt
     #   python-openstackclient
 python-manilaclient==6.2.0
     # via
     #   -c upper-constraints.txt.master
-    #   -r src/openstackclient/requirements.txt
     #   python-openstackclient
 python-octaviaclient==3.14.0
     # via
@@ -387,6 +373,7 @@ python-octaviaclient==3.14.0
 python-openstackclient==10.2.1
     # via
     #   -c upper-constraints.txt.master
+    #   -r openstackclient/pythondeps.txt
     #   python-octaviaclient
 python-swiftclient==4.10.0
     # via
@@ -416,7 +403,6 @@ referencing==0.37.0
 requests==2.34.2
     # via
     #   -c upper-constraints.txt.master
-    #   -r src/openstackclient/requirements.txt
     #   keystoneauth1
     #   osc-lib
     #   oslo-config
@@ -458,7 +444,6 @@ six==1.17.0
 stevedore==5.9.0
     # via
     #   -c upper-constraints.txt.master
-    #   -r src/openstackclient/requirements.txt
     #   cliff
     #   dogpile-cache
     #   keystoneauth1
