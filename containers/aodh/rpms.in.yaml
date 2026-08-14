@@ -14,11 +14,13 @@ arches:
   - aarch64
 
 packages:
+  - cargo
   - gcc
   - gcc-c++
   - git-core
   - httpd
   - libffi-devel
+  - libxml2
   - libxml2-devel
   - libxslt-devel
   - mod_ssl
@@ -28,3 +30,4 @@ packages:
   - python3-mod_wsgi
   - python3-pip
   - python3-setuptools
+  - rust
