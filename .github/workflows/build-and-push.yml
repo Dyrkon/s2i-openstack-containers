@@ -76,18 +76,34 @@ jobs:
 
       - name: Expire commit-sha tags
         # Set a Quay tag expiration on the master-<sha> tag only, via the
-        # tag/expiration API. This is a per-tag pointer, not an image label,
-        # so it never touches master-latest (or any other tag later applied
-        # to the same image) and has no effect on downstream container
-        # builds, which don't run this workflow.
+        # tag update API. This is a per-tag pointer, not an image label, so
+        # it never touches master-latest (or any other tag later applied to
+        # the same image) and has no effect on downstream container builds,
+        # which don't run this workflow.
         run: |
+          set -x
           EXP_TIME=$(($(date +%s) + TAG_EXPIRATION_WEEKS * 604800))
           for FULL_REPO in ${{ steps.built-images.outputs.repos }}; do
             REPO_NAME="${FULL_REPO##*/}"
-            echo "Setting expiration on ${NAMESPACE}/${REPO_NAME}:master-${{ github.sha }}"
-            curl -s -f -X PUT \
+            REPO_URL="https://${{ env.REGISTRY }}/api/v1/repository/${NAMESPACE}/${REPO_NAME}"
+            TAG_NAME="master-${{ github.sha }}"
+            echo "Setting expiration on ${NAMESPACE}/${REPO_NAME}:${TAG_NAME}"
+
+            HTTP_STATUS=$(curl -s -o response.json -w "%{http_code}" -X PUT \
               -H "Authorization: Bearer ${{ secrets.QUAY_OAUTH_TOKEN }}" \
               -H "Content-Type: application/json" \
               -d "{\"expiration\": ${EXP_TIME}}" \
-              "https://${{ env.REGISTRY }}/api/v1/repository/${NAMESPACE}/${REPO_NAME}/tag/master-${{ github.sha }}/expiration"
+              "${REPO_URL}/tag/${TAG_NAME}")
+
+            if [ "$HTTP_STATUS" -lt 200 ] || [ "$HTTP_STATUS" -ge 300 ]; then
+              echo "Failed to set expiration, HTTP ${HTTP_STATUS}: $(cat response.json)"
+              exit 1
+            fi
+            echo "Response: $(cat response.json)"
+
+            EXPIRATION=$(curl -s \
+              -H "Authorization: Bearer ${{ secrets.QUAY_OAUTH_TOKEN }}" \
+              "${REPO_URL}/tag/?specificTag=${TAG_NAME}&onlyActiveTags=true" \
+              | jq -r '.tags[0].expiration // "none"')
+            echo "Confirmed expiration for ${REPO_NAME}:${TAG_NAME}: ${EXPIRATION}"
           done
