@@ -1,4 +1,4 @@
-master upper-constraints https://opendev.org/openstack/requirements.git master 377f367109c44aaaefc73aa8776e314810e3ad37
+master upper-constraints https://opendev.org/openstack/requirements.git master b79ae30778228441fe49b61fc51b0ff2f440546c
 master tempest https://opendev.org/openstack/tempest.git master fa340b1f5fff8f57a018be206644c81b6d36b3d4
 master python-tempestconf https://opendev.org/openstack/python-tempestconf.git master 66ea243053f2b7a0abc015164baa4a338d4a2621
 master barbican-tempest-plugin https://opendev.org/openstack/barbican-tempest-plugin.git master 7c5276f0f1087e8565b1ecbf14b23e73398ba25f

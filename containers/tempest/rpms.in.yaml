@@ -22,11 +22,10 @@ packages:
   - libffi-devel
   - openssl-devel
   - python3
+  - python3-cryptography-43.0.0-4.el10
   - python3-devel
   - python3-pip
   - python3-setuptools
-  - python3-subunit
   - qemu-img
   - rust
-  - subunit-filters
   - tar

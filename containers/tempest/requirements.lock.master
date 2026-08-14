@@ -370,7 +370,7 @@ oslo-concurrency==7.6.1
     #   oslo-service
     #   osprofiler
     #   tempest
-oslo-config==10.6.0
+oslo-config==10.7.0
     # via
     #   -c upper-constraints.txt.master
     #   -r src/barbican-tempest-plugin/requirements.txt
