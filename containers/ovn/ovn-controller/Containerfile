@@ -1,0 +1,13 @@
+ARG BASE_IMAGE=localhost/openstack/openstack-base:latest
+
+# RPM-only image: no Python source is built, packages come from the
+# distro/OVN repos already enabled in the base image's rpms.repo.
+FROM ${BASE_IMAGE}
+
+LABEL summary="OVN controller" \
+      io.k8s.description="ovn-controller host agent (binds OVS to the OVN southbound DB) with kolla interface"
+
+COPY ovn-controller/bindeps.txt /tmp/bindeps.txt
+RUN pkgs=$(cat /tmp/bindeps.txt | grep -v '^#' | grep -v '^$' | tr '\n' ' ') && \
+    if [ -n "${pkgs}" ]; then microdnf -y install ${pkgs} && microdnf clean all; fi && \
+    rm /tmp/bindeps.txt
