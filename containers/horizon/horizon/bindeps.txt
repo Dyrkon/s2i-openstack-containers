@@ -1,0 +1,23 @@
+python3
+python3-pip
+# Apache WSGI server for the dashboard
+httpd
+mod_ssl
+python3-mod_wsgi
+# django-admin compilemessages (tcib build-time localization)
+gettext
+# extend_start.sh settings_bundle uses tar to hash local_settings
+tar
+# SECRET_KEY generation in the RPM %post; openssl is also a spec Requires
+openssl
+# Pillow runtime libraries
+libjpeg-turbo
+freetype
+libwebp
+libtiff
+# cryptography from RPM for certifications and CVE handling.
+# Pinned to 43.x to match upper-constraints.txt (cryptography==43.0.3).
+# The default el10 RPM ships 49.x which conflicts with pyOpenSSL 24.2.1
+# (requires cryptography<44), causing an ImportError at runtime. Bump this
+# pin once pyOpenSSL >= 25.0 lands in upper-constraints (drops the <44 cap).
+python3-cryptography-43.0.0-4.el10
