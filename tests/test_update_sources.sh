@@ -489,6 +489,148 @@ test_update_sources_multiple_targets_symlinks() {
   done
 }
 
+# ── update-lockfiles tests ──────────────────────────────────────────────
+
+test_update_lockfiles_regenerates_lockfile() {
+  command -v pip-compile >/dev/null 2>&1 || skip_test "pip-compile not on PATH"
+
+  _run_build STREAM=master
+  local lock="${TEST_DIR}/containers/test-svc/requirements.lock.master"
+  assert_file_exists "${lock}"
+  local before
+  before=$(cat "${lock}")
+
+  _run_cmd STREAM=master -- update-lockfiles test-svc
+  assert_file_exists "${lock}"
+}
+
+test_update_lockfiles_fails_without_constraints() {
+  command -v pip-compile >/dev/null 2>&1 || skip_test "pip-compile not on PATH"
+
+  if _run_cmd STREAM=master -- update-lockfiles test-svc 2>/dev/null; then
+    echo "    ASSERTION FAILED: expected failure without constraints"
+    return 1
+  fi
+  assert_grep "Run 'update-sources' first" "${TEST_DIR}/build.log"
+}
+
+test_update_lockfiles_fails_without_lockfile() {
+  command -v pip-compile >/dev/null 2>&1 || skip_test "pip-compile not on PATH"
+
+  # Create constraints but not the lockfile
+  _run_build STREAM=master
+  rm "${TEST_DIR}/containers/test-svc/requirements.lock.master"
+
+  if _run_cmd STREAM=master -- update-lockfiles test-svc 2>/dev/null; then
+    echo "    ASSERTION FAILED: expected failure without lockfile"
+    return 1
+  fi
+  assert_grep "Run 'update-sources' first" "${TEST_DIR}/build.log"
+}
+
+test_update_lockfiles_includes_pythondeps() {
+  command -v pip-compile >/dev/null 2>&1 || skip_test "pip-compile not on PATH"
+
+  _run_build STREAM=master
+
+  echo "pbr" > "${TEST_DIR}/containers/test-svc/test-svc/pythondeps.txt"
+
+  _run_cmd STREAM=master -- update-lockfiles test-svc
+
+  local lock="${TEST_DIR}/containers/test-svc/requirements.lock.master"
+  assert_file_exists "${lock}"
+  assert_grep "pbr" "${lock}"
+}
+
+test_update_lockfiles_generates_buildrequirements() {
+  command -v pip-compile >/dev/null 2>&1 || skip_test "pip-compile not on PATH"
+  command -v pybuild-deps >/dev/null 2>&1 || skip_test "pybuild-deps not on PATH"
+
+  _run_build STREAM=master
+
+  rm "${TEST_DIR}/containers/test-svc/buildrequirements.lock.master"
+
+  _run_cmd STREAM=master -- update-lockfiles test-svc
+
+  assert_file_exists "${TEST_DIR}/containers/test-svc/buildrequirements.lock.master"
+}
+
+test_update_lockfiles_filters_rpm_packages() {
+  command -v pip-compile >/dev/null 2>&1 || skip_test "pip-compile not on PATH"
+
+  _run_build STREAM=master
+
+  printf 'python3\npython3-six\n' > "${TEST_DIR}/containers/test-svc/test-svc/bindeps.txt"
+
+  _run_cmd STREAM=master -- update-lockfiles test-svc
+
+  local lock="${TEST_DIR}/containers/test-svc/requirements.lock.master"
+  assert_file_exists "${lock}"
+  assert_no_grep "^six==" "${lock}"
+}
+
+test_update_lockfiles_does_not_modify_sources() {
+  command -v pip-compile >/dev/null 2>&1 || skip_test "pip-compile not on PATH"
+
+  _run_build STREAM=master
+
+  local src="${TEST_DIR}/containers/test-svc/sources.txt"
+  local before
+  before=$(cat "${src}")
+
+  _run_cmd STREAM=master -- update-lockfiles test-svc
+
+  local after
+  after=$(cat "${src}")
+  assert "sources.txt unchanged" test "${before}" = "${after}"
+}
+
+test_update_lockfiles_multiple_targets() {
+  command -v pip-compile >/dev/null 2>&1 || skip_test "pip-compile not on PATH"
+
+  _run_cmd STREAM=master -- update-sources test-svc test-svc2
+
+  rm "${TEST_DIR}/containers/test-svc/rpms.in.yaml"
+  rm "${TEST_DIR}/containers/test-svc2/rpms.in.yaml"
+
+  _run_cmd STREAM=master -- update-lockfiles test-svc test-svc2
+
+  assert_file_exists "${TEST_DIR}/containers/test-svc/rpms.in.yaml"
+  assert_file_exists "${TEST_DIR}/containers/test-svc2/rpms.in.yaml"
+  assert "no rpms.in.yaml for test-svc3" test ! -f "${TEST_DIR}/containers/test-svc3/rpms.in.yaml"
+}
+
+test_update_lockfiles_creates_symlinks() {
+  command -v pip-compile >/dev/null 2>&1 || skip_test "pip-compile not on PATH"
+  command -v pybuild-deps >/dev/null 2>&1 || skip_test "pybuild-deps not on PATH"
+
+  _run_build STREAM=master DEFAULT_STREAM=master
+
+  local d="${TEST_DIR}/containers/test-svc"
+  rm -f "${d}/requirements.lock" "${d}/buildrequirements.lock"
+
+  _run_cmd STREAM=master DEFAULT_STREAM=master -- update-lockfiles test-svc
+
+  assert_symlink "${d}/requirements.lock"
+  assert_link_target "${d}/requirements.lock" "requirements.lock.master"
+  assert_symlink "${d}/buildrequirements.lock"
+  assert_link_target "${d}/buildrequirements.lock" "buildrequirements.lock.master"
+}
+
+test_update_lockfiles_generates_rpms_in() {
+  command -v pip-compile >/dev/null 2>&1 || skip_test "pip-compile not on PATH"
+
+  _run_build STREAM=master
+
+  rm "${TEST_DIR}/containers/test-svc/rpms.in.yaml"
+
+  _run_cmd STREAM=master -- update-lockfiles test-svc
+
+  assert_file_exists "${TEST_DIR}/containers/test-svc/rpms.in.yaml"
+  assert_grep "python3" "${TEST_DIR}/containers/test-svc/rpms.in.yaml"
+  assert_grep "gcc" "${TEST_DIR}/containers/test-svc/rpms.in.yaml"
+}
+
 # ── Run all tests ────────────────────────────────────────────────────────
 
 echo "=== update-sources tests ==="
@@ -517,6 +659,16 @@ TESTS=(
   test_update_sources_all_updates_everything
   test_update_sources_unknown_target_fails
   test_update_sources_multiple_targets_symlinks
+  test_update_lockfiles_regenerates_lockfile
+  test_update_lockfiles_fails_without_constraints
+  test_update_lockfiles_fails_without_lockfile
+  test_update_lockfiles_includes_pythondeps
+  test_update_lockfiles_generates_buildrequirements
+  test_update_lockfiles_filters_rpm_packages
+  test_update_lockfiles_does_not_modify_sources
+  test_update_lockfiles_multiple_targets
+  test_update_lockfiles_creates_symlinks
+  test_update_lockfiles_generates_rpms_in
 )
 
 for t in "${TESTS[@]}"; do
