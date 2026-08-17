@@ -20,6 +20,19 @@ COPY builddeps.txt /tmp/builddeps.txt
 RUN pkgs=$(cat /tmp/builddeps.txt | grep -v '^#' | grep -v '^$' | tr '\n' ' ') && \
     if [ -n "${pkgs}" ]; then microdnf -y install ${pkgs} && microdnf clean all; fi
 
+# Build liberasurecode from source (fetched via sources.txt into
+# /src/liberasurecode). Provides erasurecode.h + liberasurecode.so to compile
+# the pyeclib C extension, and the runtime .so copied into the final image
+# below. Replaces the liberasurecode / liberasurecode-devel RPMs.
+RUN cd /src/liberasurecode && \
+    ./autogen.sh && \
+    ./configure --prefix=/usr --libdir=/usr/lib64 --disable-static CFLAGS="-Wno-error" && \
+    make -j"$(nproc)" && \
+    make install DESTDIR=/lec-install && \
+    cp -a /lec-install/usr/. /usr/ && \
+    find /lec-install -name '*.la' -delete && \
+    ldconfig
+
 COPY pythonbuilddeps.txt /tmp/pythonbuilddeps.txt
 RUN pkgs=$(cat /tmp/pythonbuilddeps.txt | grep -v '^#' | grep -v '^$' | tr '\n' ' ') && \
     if [ -n "${pkgs}" ]; then pip3 install --no-cache-dir -c /deps-upper-constraints.txt ${pkgs}; fi && \
@@ -65,6 +78,11 @@ LABEL summary="OpenStack Swift Proxy Server" \
       io.k8s.description="Swift proxy server built from source with kolla interface"
 
 RUN uid_gid_manage swift
+
+# Runtime liberasurecode (source-built in the build stage above). Replaces
+# the liberasurecode runtime RPM.
+COPY --from=build /lec-install/usr/lib64/ /usr/lib64/
+RUN ldconfig
 
 COPY bindeps.txt /tmp/bindeps.txt
 COPY swift-proxy-server/bindeps.txt /tmp/bindeps-extra.txt
