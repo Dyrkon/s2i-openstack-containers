@@ -310,6 +310,16 @@ build_image() {
     return 1
   fi
 
+  # Pure RPM project: no sources to clone, no constraints needed
+  if [[ ! -f "${CONTAINERS_DIR}/${project}/sources.txt" ]]; then
+    buildah bud \
+      $(image_tag_args "${dir_name}") \
+      --build-arg "BASE_IMAGE=${BASE_IMAGE}" \
+      -f "${CONTAINERS_DIR}/${dir_name}/Containerfile" \
+      "${CONTAINERS_DIR}/${project}/"
+    return
+  fi
+
   # Clone sources for this stream
   ensure_sources_for_stream "${dir_name}" "${STREAM}"
 
@@ -648,6 +658,11 @@ generate_requirements_lock() {
   local project_dir="${CONTAINERS_DIR}/${project}"
   local constraints_file="${project_dir}/${UPSTREAM_CONSTRAINTS}.${stream}"
 
+  if [[ ! -f "${project_dir}/sources.txt" ]]; then
+    echo "--- Skipping lockfile for ${project} (pure RPM project, no sources.txt) ---"
+    return
+  fi
+
   if [[ ! -f "${constraints_file}" ]]; then
     echo "WARNING: No constraints file at ${constraints_file}, skipping lock for ${project}" >&2
     return
@@ -705,7 +720,7 @@ generate_requirements_lock() {
   if [[ -n "${rpm_pkgs}" ]]; then
     local exclude_str
     exclude_str=$(echo "${rpm_pkgs}" | tr '\n' ' ')
-    echo "--- Filtering RPM-provided packages from ${lock_file}: ${exclude_str}---"
+    echo "--- Filtering RPM-provided packages from ${lock_file}: ${exclude_str} ---"
     filter_lockfile_rpm_packages "${project_dir}/${lock_file}" "${exclude_str}"
   fi
 }
@@ -749,6 +764,11 @@ generate_buildrequirements_lock() {
   local lock_file="${project_dir}/${CONSTRAINTS_FILE}.${stream}"
   local build_lock_file="${BUILD_CONSTRAINTS_FILE}.${stream}"
 
+  if [[ ! -f "${project_dir}/sources.txt" ]]; then
+    echo "--- Skipping lockfile for ${project} (pure RPM project, no sources.txt) ---"
+    return
+  fi
+
   if [[ ! -f "${lock_file}" ]]; then
     echo "WARNING: No ${lock_file} found, skipping build lock for ${project}" >&2
     return
@@ -788,6 +808,108 @@ generate_buildlocks_for_targets() {
     _buildlock_projects_seen["${project}"]=1
 
     generate_buildrequirements_lock "${project}" "${stream}"
+  done
+}
+
+# Regenerate requirements.lock for a project using the existing lockfile
+# and pythondeps/pythonbuilddeps files, without cloning any repos.
+# Requires upper-constraints.txt.<stream> and requirements.lock.<stream>
+# to already exist (created by update-sources).
+regenerate_requirements_lock() {
+  local project="$1"
+  local stream="$2"
+  local project_dir="${CONTAINERS_DIR}/${project}"
+  local constraints_file="${project_dir}/${UPSTREAM_CONSTRAINTS}.${stream}"
+  local lock_file="${CONSTRAINTS_FILE}.${stream}"
+  local lock_path="${project_dir}/${lock_file}"
+
+  if [[ ! -f "${project_dir}/sources.txt" ]]; then
+    echo "--- Skipping lockfile for ${project} (pure RPM project, no sources.txt) ---"
+    return
+  fi
+
+  if [[ ! -f "${constraints_file}" ]]; then
+    echo "ERROR: No ${constraints_file} found for ${project}." >&2
+    echo "       Run 'update-sources' first to fetch constraints." >&2
+    return 1
+  fi
+
+  if [[ ! -f "${lock_path}" ]]; then
+    echo "ERROR: No ${lock_path} found for ${project}." >&2
+    echo "       Run 'update-sources' first to generate the initial lockfile." >&2
+    return 1
+  fi
+
+  local input_files=("${lock_file}")
+
+  for depfile in pythondeps.txt pythonbuilddeps.txt; do
+    if [[ -f "${project_dir}/${depfile}" ]]; then
+      input_files+=("${depfile}")
+    fi
+  done
+
+  for image_dir in "${project_dir}"/*/; do
+    local image=$(basename "${image_dir}")
+    [[ "${image}" == "common" || "${image}" == "src" ]] && continue
+    [[ ! -f "${image_dir}/Containerfile" ]] && continue
+
+    for depfile in pythondeps.txt pythonbuilddeps.txt; do
+      if [[ -f "${image_dir}/${depfile}" ]]; then
+        input_files+=("${image}/${depfile}")
+      fi
+    done
+  done
+
+  local tmp_lock
+  tmp_lock=$(mktemp "${project_dir}/.${lock_file}.XXXXXX")
+
+  echo "--- Regenerating ${lock_path} ---"
+  if ! (cd "${project_dir}" && \
+    pip-compile --no-annotate --allow-unsafe --strip-extras \
+      -c "${UPSTREAM_CONSTRAINTS}.${stream}" \
+      -o "${tmp_lock##*/}" \
+      "${input_files[@]}" && \
+    normalize_generated_lock "${tmp_lock##*/}"); then
+    rm -f "${tmp_lock}"
+    return 1
+  fi
+  mv "${tmp_lock}" "${lock_path}"
+
+  local rpm_pkgs
+  rpm_pkgs=$(collect_rpm_python_packages "${project_dir}")
+  if [[ -n "${rpm_pkgs}" ]]; then
+    local exclude_str
+    exclude_str=$(echo "${rpm_pkgs}" | tr '\n' ' ')
+    echo "--- Filtering RPM-provided packages from ${lock_file}: ${exclude_str}---"
+    filter_lockfile_rpm_packages "${lock_path}" "${exclude_str}"
+  fi
+}
+
+# Regenerate lockfiles for each project in the target scope.
+regenerate_locks_for_targets() {
+  local stream="${!#}"
+  local targets_args=("${@:1:$#-1}")
+
+  if ! command -v pip-compile &>/dev/null; then
+    echo "ERROR: pip-compile not found. Install it with: pip install pip-tools" >&2
+    return 1
+  fi
+
+  local targets
+  targets=($(resolve_targets "${targets_args[@]}"))
+
+  declare -A _relock_projects_seen
+  for img in "${targets[@]}"; do
+    local project
+    project="$(project_name "${img}")"
+    if [[ -z "${project}" ]]; then
+      [[ "${img}" != "base" ]] && continue
+      project="base"
+    fi
+    [[ -n "${_relock_projects_seen[$project]:-}" ]] && continue
+    _relock_projects_seen["${project}"]=1
+
+    regenerate_requirements_lock "${project}" "${stream}"
   done
 }
 
@@ -1148,6 +1270,44 @@ case "${ACTION}" in
       done
     fi
     ;;
+  update-lockfiles)
+    echo "=== Generating rpms.in.yaml files ==="
+    generate_rpms_in_for_targets "${TARGETS[@]}"
+
+    echo ""
+    echo "=== Regenerating requirements.lock files ==="
+    regenerate_locks_for_targets "${TARGETS[@]}" "${STREAM}"
+
+    echo ""
+    echo "=== Regenerating buildrequirements.lock files ==="
+    generate_buildlocks_for_targets "${TARGETS[@]}" "${STREAM}"
+
+    # Create un-streamed symlinks for the default stream
+    if [[ "${STREAM}" == "${DEFAULT_STREAM}" ]]; then
+      echo ""
+      echo "=== Creating default stream symlinks (${DEFAULT_STREAM}) ==="
+      _symlink_targets=($(resolve_targets "${TARGETS[@]}"))
+      declare -A _symlink_seen_ul
+      for _s_img in "${_symlink_targets[@]}"; do
+        _s_project="$(project_name "${_s_img}")"
+        if [[ -z "${_s_project}" ]]; then
+          [[ "${_s_img}" != "base" ]] && continue
+          _s_project="base"
+        fi
+        [[ -n "${_symlink_seen_ul[$_s_project]:-}" ]] && continue
+        _symlink_seen_ul["${_s_project}"]=1
+
+        _s_pdir="${CONTAINERS_DIR}/${_s_project}"
+        for _s_suffix in "${CONSTRAINTS_FILE}" "${BUILD_CONSTRAINTS_FILE}"; do
+          _s_streamed="${_s_pdir}/${_s_suffix}.${DEFAULT_STREAM}"
+          if [[ -f "${_s_streamed}" ]]; then
+            ln -sf "${_s_suffix}.${DEFAULT_STREAM}" "${_s_pdir}/${_s_suffix}"
+            echo "  ${_s_pdir}/${_s_suffix} -> ${_s_suffix}.${DEFAULT_STREAM}"
+          fi
+        done
+      done
+    fi
+    ;;
   install-deps)
     SYSTEM_DEPS=(git buildah podman)
     echo "=== Installing system dependencies ==="
@@ -1170,7 +1330,7 @@ case "${ACTION}" in
     list_images
     ;;
   *)
-    echo "Usage: STREAM=<name> $0 {build|build-parallel|push|update-sources|install-deps|list} [target ...]"
+    echo "Usage: STREAM=<name> $0 {build|build-parallel|push|update-sources|update-lockfiles|install-deps|list} [target ...]"
     echo ""
     echo "Images (discovered from containers/):"
     for dir_name in $(discover_images); do
