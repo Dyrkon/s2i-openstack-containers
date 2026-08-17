@@ -1,0 +1,4 @@
+# Object replication
+rsync
+# Health checks and replication port probes between nodes
+nmap-ncat
