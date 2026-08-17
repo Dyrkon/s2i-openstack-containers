@@ -32,4 +32,14 @@ jobs:
         run: tox -e update-lockfiles
 
       - name: Require reproducible generated files
-        run: git diff --exit-code -- containers/
+        run: |
+          changed=$(git diff --name-only)
+          untracked=$(git ls-files --others --exclude-standard containers/)
+          if [[ -n "${changed}" || -n "${untracked}" ]]; then
+            echo "ERROR: Lockfiles are out of date."
+            echo "Run 'tox -e update-lockfiles' locally and commit the result."
+            echo ""
+            [[ -n "${changed}" ]] && echo "Modified files:" && echo "${changed}"
+            [[ -n "${untracked}" ]] && echo "New files:" && echo "${untracked}"
+            exit 1
+          fi
