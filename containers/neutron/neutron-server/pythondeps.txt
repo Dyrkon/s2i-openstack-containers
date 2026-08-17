@@ -1,0 +1,9 @@
+# Additional Python packages not in neutron's requirements.txt
+# Database driver (mysql extra for oslo.db)
+oslo.db[mysql]
+# Caching backend (dogpile extra for oslo.cache)
+oslo.cache[dogpile]
+# Optional API extension service plugins loaded by neutron-server
+# (neutron-fwaas and tap-as-a-service are built from source alongside
+# neutron, see sources.txt — the pypi/upper-constraints releases are
+# incompatible with master neutron)

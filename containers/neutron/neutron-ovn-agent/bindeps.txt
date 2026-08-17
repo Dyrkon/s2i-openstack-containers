@@ -1,0 +1,22 @@
+# Runtime system dependencies for neutron-ovn-agent
+python3
+python3-pip
+# Pinned to 43.x to match upper-constraints.txt (cryptography==43.0.3).
+# The default el10 RPM ships 49.x which conflicts with pyOpenSSL 24.2.1
+# (requires cryptography<44), causing an ImportError at runtime. Bump this
+# pin once pyOpenSSL >= 25.0 lands in upper-constraints (drops the <44 cap).
+python3-cryptography-43.0.0-4.el10
+python3-unbound
+# Implements the per-network metadata proxy process
+haproxy
+# Routing daemon suite used for BGP/dynamic routing functionality
+frr
+# OVS CLI used to interact with the local vswitch
+openvswitch
+# Network namespace and connection tracking tooling used by the agent
+iproute
+conntrack-tools
+keepalived
+# Container runtime used to manage per-namespace agent helper processes
+podman
+libseccomp
