@@ -16,6 +16,7 @@ qemu-img
 iputils
 # ip command used by neutron tempest plugin (not in UBI base)
 iproute
+nmap
 # For cloning external tempest plugins at runtime via run_tempest.sh
 git-core
 # For extracting timing data archives (TEMPEST_TIMING_DATA_URL)
