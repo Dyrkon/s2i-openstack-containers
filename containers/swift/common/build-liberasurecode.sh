@@ -14,6 +14,11 @@
 set -eux
 
 cd /src/liberasurecode
+# Build only the library subdir. "test" binaries fail to link against internal
+# (non-exported) symbols (rs_galois_inverse, init_alg_sig, ...) on newer
+# toolchains, and "doc" only builds Doxygen HTML we don't ship. We only need
+# the library, headers and .pc file (all installed from the top-level Makefile).
+sed -i 's/^SUBDIRS = src test doc/SUBDIRS = src/' Makefile.am
 ./autogen.sh
 ./configure --prefix=/usr --libdir=/usr/lib64 --disable-static --disable-mmi CFLAGS="-Wno-error"
 make -j"$(nproc)"
