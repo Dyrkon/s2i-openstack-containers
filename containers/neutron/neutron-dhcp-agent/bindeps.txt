@@ -13,8 +13,6 @@ dnsmasq
 dnsmasq-utils
 # Router advertisement daemon for IPv6 deployments
 radvd
-# DHCPv6 prefix delegation client, default for IPv6 PD
-dibbler-client
 # OVS CLI used by the interface driver to plug the DHCP port
 openvswitch
 # Network namespace and routing/firewall tooling used by the agent
