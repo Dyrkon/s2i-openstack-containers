@@ -327,13 +327,29 @@ build_image() {
   # Clone sources for this stream
   ensure_sources_for_stream "${dir_name}" "${STREAM}"
 
-  # Verify main source exists
-  local sources_dir="${CONTAINERS_DIR}/${project}/src"
-  local src="${sources_dir}/${project}"
-  if [[ ! -d "${src}" ]]; then
-    echo "ERROR: Main source not found at ${src}" >&2
-    echo "       Ensure ${project} is listed in sources.txt for stream '${STREAM}'" >&2
-    return 1
+  # Verify the main source directory exists only when the project declares
+  # non-upper-constraints source repos in sources.txt.  Pure PyPI projects
+  # (e.g. python-openstackclient) list only upper-constraints and install
+  # everything via pip, so they have no cloned source tree and skip this check.
+  local has_service_sources=0
+  local project_sources_file="${CONTAINERS_DIR}/${project}/sources.txt"
+  if [[ -f "${project_sources_file}" ]]; then
+    while IFS=' ' read -r source_stream source_name source_rest; do
+      [[ -z "${source_stream}" || "${source_stream}" == \#* ]] && continue
+      [[ "${source_stream}" != "${STREAM}" ]] && continue
+      [[ "${source_name}" == "upper-constraints" ]] && continue
+      has_service_sources=1
+      break
+    done < "${project_sources_file}"
+  fi
+  if [[ "${has_service_sources}" -eq 1 ]]; then
+    local sources_dir="${CONTAINERS_DIR}/${project}/src"
+    local src="${sources_dir}/${project}"
+    if [[ ! -d "${src}" ]]; then
+      echo "ERROR: Main source not found at ${src}" >&2
+      echo "       Ensure ${project} is listed in sources.txt for stream '${STREAM}'" >&2
+      return 1
+    fi
   fi
 
   # Prefer lockfile (<CONSTRAINTS_FILE>.<stream>) if available, otherwise fall back to upstream constraints

@@ -1,0 +1,59 @@
+ARG BASE_IMAGE=localhost/openstack/openstack-base:latest
+
+# --- Build stage: pre-compile wheels for C/Rust extension packages ---
+FROM ${BASE_IMAGE} AS build
+
+ARG CONSTRAINTS_FILE=requirements.lock
+COPY ${CONSTRAINTS_FILE} /deps-upper-constraints.txt
+
+ARG PIP_NO_BINARY=""
+ENV PIP_NO_BINARY=${PIP_NO_BINARY}
+ENV MATURIN_NO_INSTALL_RUST=true
+
+COPY openstackclient/builddeps.txt /tmp/builddeps.txt
+RUN pkgs=$(cat /tmp/builddeps.txt | grep -v '^#' | grep -v '^$' | tr '\n' ' ') && \
+    if [ -n "${pkgs}" ]; then microdnf -y install ${pkgs} && microdnf clean all; fi
+
+COPY openstackclient/pythonbuilddeps.txt /tmp/pythonbuilddeps.txt
+RUN pkgs=$(cat /tmp/pythonbuilddeps.txt | grep -v '^#' | grep -v '^$' | tr '\n' ' ') && \
+    if [ -n "${pkgs}" ]; then pip3 install --no-cache-dir -c /deps-upper-constraints.txt ${pkgs}; fi && \
+    rm /tmp/pythonbuilddeps.txt
+
+# Build wheels for all packages pinned in the lockfile so the runtime stage
+# can install without build tools or network access.
+RUN pip3 wheel --no-cache-dir --no-deps \
+      --wheel-dir=/wheels -r /deps-upper-constraints.txt
+
+# --- Runtime stage ---
+FROM ${BASE_IMAGE}
+
+LABEL summary="OpenStack unified command-line client" \
+      io.k8s.description="OpenStackClient and service plugins installed from PyPI, pinned by upper-constraints"
+
+RUN uid_gid_manage cloud-admin
+
+COPY openstackclient/bindeps.txt /tmp/bindeps.txt
+RUN pkgs=$(cat /tmp/bindeps.txt | grep -v '^#' | grep -v '^$' | tr '\n' ' ') && \
+    if [ -n "${pkgs}" ]; then microdnf -y install ${pkgs} && microdnf clean all; fi && \
+    rm /tmp/bindeps.txt
+
+COPY --from=build /wheels /wheels
+COPY --from=build /deps-upper-constraints.txt /deps-upper-constraints.txt
+COPY openstackclient/pythondeps.txt /tmp/pythondeps.txt
+RUN pkgs=$(cat /tmp/pythondeps.txt | grep -v '^#' | grep -v '^$' | tr '\n' ' ') && \
+    pip3 install --no-cache-dir --prefix=/usr \
+      -c /deps-upper-constraints.txt \
+      --find-links=/wheels \
+      ${pkgs} && \
+    rm -rf /wheels /tmp/pythondeps.txt
+
+RUN mkdir -p /etc/bash_completion.d /var/lib/openstack-client && \
+    openstack complete > /etc/bash_completion.d/osc.bash_completion && \
+    baremetal complete > /etc/bash_completion.d/baremetal.bash_completion 2>/dev/null || true
+
+RUN mkdir -p /home/cloud-admin && \
+    chown -R cloud-admin:cloud-admin /home/cloud-admin /var/lib/openstack-client
+
+WORKDIR /home/cloud-admin
+USER cloud-admin
+CMD ["/usr/bin/bash"]

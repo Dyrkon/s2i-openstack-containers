@@ -1,0 +1,15 @@
+python-openstackclient
+osc-placement
+python-barbicanclient
+python-designateclient
+python-glanceclient
+python-heatclient
+python-ironicclient
+python-ironic-inspector-client
+python-octaviaclient
+python-manilaclient
+python-observabilityclient
+aodhclient
+python-watcherclient
+python-cloudkittyclient
+python-cyborgclient
