@@ -1,0 +1,18 @@
+# Test runner (tobiko test-requirements.txt).
+# Do not use extras syntax here (pytest-xdist[psutil]): Containerfile expands
+# pythondeps unquoted and bash would glob the brackets.
+pytest
+pytest-html
+pytest-metadata
+pytest-xdist
+psutil
+# Extra deps not always covered by upper-constraints
+# (tobiko extra-requirements.txt)
+dpkt
+openshift-client
+podman==4.7.0
+pytest-cov
+pytest-reportportal
+pytest-rerunfailures
+pytest-subtests
+pytest-timeout
