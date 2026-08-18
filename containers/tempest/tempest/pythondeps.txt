@@ -3,3 +3,7 @@
 python-openstackclient
 # Provides subunit2html used by run_tempest.sh to generate HTML test reports
 os-testr
+# Provides the junitxml module imported by subunit2junitxml (used by
+# run_tempest.sh to generate JUnit XML reports); python-subunit does not
+# pull this in automatically.
+junitxml
