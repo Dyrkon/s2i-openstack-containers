@@ -16,7 +16,6 @@ arches:
 packages:
   - cargo
   - conntrack-tools
-  - dibbler-client
   - dnsmasq
   - dnsmasq-utils
   - frr
