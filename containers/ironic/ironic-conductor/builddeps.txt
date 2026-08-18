@@ -1,0 +1,25 @@
+# Build-time dependencies for compiling Python C extensions
+# git is needed by pbr to determine the package version
+git-core
+gcc
+gcc-c++
+python3-devel
+python3-setuptools
+libffi-devel
+openssl-devel
+python3-cryptography
+# Required to build lxml (ironic depends on openstacksdk which needs lxml)
+libxml2-devel
+libxslt-devel
+# To build bcrypt from source
+rust
+# To build rpds-py from source
+cargo
+# PXE boot asset packages (downloaded and extracted by extract-boot-assets.sh)
+ipxe-bootimgs
+grub2-efi-x64
+shim
+# Needed by extract-boot-assets.sh for rpm2cpio extraction and ESP image build
+cpio
+dosfstools
+mtools
