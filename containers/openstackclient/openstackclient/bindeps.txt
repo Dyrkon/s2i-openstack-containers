@@ -9,3 +9,5 @@ bash-completion
 iputils
 ipmitool
 ceph-common
+# needed for use with `oc cp`
+tar
