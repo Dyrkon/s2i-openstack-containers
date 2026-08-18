@@ -18,6 +18,5 @@ packages:
   - openvswitch-ovn-central
   - openvswitch-ovn-common
   - openvswitch-ovn-host
-  - python3-netifaces
   - python3-openvswitch
   - tcpdump
