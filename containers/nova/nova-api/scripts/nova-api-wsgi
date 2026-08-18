@@ -1,0 +1,4 @@
+#!/usr/bin/python3 -sP
+from nova.api.openstack import wsgi_app
+
+application = wsgi_app.init_application('osapi_compute', 'nova-api')
