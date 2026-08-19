@@ -77,6 +77,14 @@ If a checkout already exists in `src/` (e.g., a local development clone),
 `build.sh` uses it as-is and does **not** remove it on exit. This lets you
 work on a local branch without `build.sh` overwriting it.
 
+This mechanism can be used to build containers with any arbitrary content,
+including unmerged commits. Place or symlink the desired source under
+`containers/<project>/src/<name>/` (or `containers/<project>/<image>/src/<name>/`
+for image-specific sources) before running `build.sh build`. The pinned hash in
+`sources.txt` is ignored for that package. This works both locally and in CI
+workflows -- for example, a Zuul or GitHub Actions job can clone a patch under
+review into `src/` and build containers that include the unmerged change.
+
 ### Source overrides
 
 To patch or replace a transitive dependency, place the modified source in
