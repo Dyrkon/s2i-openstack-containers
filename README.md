@@ -44,6 +44,8 @@ tox -e linters
 
 ## Documentation
 
+- [`docs/design.md`](docs/design.md) covers the design principles behind the
+  container images and Containerfiles.
 - [`docs/developer-guide.md`](docs/developer-guide.md) describes repository
   structure, sources, generated files, builds, and maintenance workflows.
 - [`docs/TESTING.md`](docs/TESTING.md) provides a concise testing entry point.
