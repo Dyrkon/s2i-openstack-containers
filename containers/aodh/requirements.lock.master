@@ -11,7 +11,6 @@ cliff==4.15.0
 cmd2==4.0.0
 cotyledon==2.2.0
 croniter==6.2.2
-cryptography==43.0.3
 debtcollector==3.1.0
 decorator==5.3.1
 dnspython==2.8.0
