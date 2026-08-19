@@ -1,0 +1,2 @@
+hostname
+rabbitmq-server

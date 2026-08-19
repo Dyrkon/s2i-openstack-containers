@@ -1,0 +1,11 @@
+galera
+hostname
+jq
+mariadb
+mariadb-backup
+mariadb-server-galera
+mariadb-server-utils
+rsync
+socat
+stunnel
+tar

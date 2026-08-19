@@ -1,0 +1,18 @@
+ARG BASE_IMAGE=localhost/openstack/openstack-base:latest
+FROM ${BASE_IMAGE}
+
+LABEL summary="OpenStack MariaDB" \
+      io.k8s.description="MariaDB database service with Galera clustering for OpenStack"
+
+RUN uid_gid_manage mysql
+
+COPY mariadb/bindeps.txt /tmp/bindeps.txt
+RUN pkgs=$(cat /tmp/bindeps.txt | grep -v '^#' | grep -v '^$' | tr '\n' ' ') && \
+    if [ -n "${pkgs}" ]; then microdnf -y install ${pkgs} && microdnf clean all && rm -rf /var/cache/dnf; fi && \
+    rm /tmp/bindeps.txt
+
+RUN rm -rf /var/lib/mysql/* /etc/my.cnf.d/mariadb-server.cnf /etc/my.cnf.d/auth_gssapi.cnf
+
+USER mysql
+
+CMD ["mysqld_safe"]
