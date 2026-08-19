@@ -1,12 +1,9 @@
-# OpenStack Designate (central, mdns, producer, sink)
+# OpenStack Designate Worker
 #
-# This image serves designate-central, designate-mdns, designate-producer,
-# and designate-sink.
-# The service to run is selected by the config.json "command" field.
-#
-# designate-worker has its own image (designate-worker) since it alone
-# needs rootwrap, sudo, and the "bind" package to manage the bind9 pool
-# backend via rndc/nsupdate.
+# This image serves designate-worker. The bind9 pool backend driver needs
+# rootwrap, sudo, and the "bind" package (for rndc/nsupdate) to manage the
+# DNS server, so this image installs them while the other designate-central
+# services (central, mdns, producer, sink) do not.
 
 ARG BASE_IMAGE=localhost/openstack/openstack-base:latest
 
@@ -19,7 +16,7 @@ ARG SERVICE_SRC=/src/designate
 ARG CONSTRAINTS_FILE=requirements.lock
 COPY ${CONSTRAINTS_FILE} /deps-upper-constraints.txt
 COPY src/ /src/
-COPY designate-central/src/ /src/
+COPY designate-worker/src/ /src/
 
 # We can force build from source of all packages optionally
 ARG PIP_NO_BINARY=""
@@ -67,20 +64,28 @@ RUN for src_dir in /src/*/ /src/overrides/*/; do \
       fi; \
     done > /source-built-packages.txt
 
+# Collect upstream config files (rootwrap.conf ships filters_path entries for
+# both /etc/designate/rootwrap.d and /usr/share/designate/rootwrap; the RPM
+# packaging installs filters to the latter, so we mirror that here)
+RUN mkdir -p /configfiles/etc/designate /configfiles/usr/share/designate/rootwrap && \
+    cp -a ${SERVICE_SRC}/etc/designate/rootwrap.conf /configfiles/etc/designate/ && \
+    cp -a ${SERVICE_SRC}/etc/designate/rootwrap.d/*.filters /configfiles/usr/share/designate/rootwrap/
+
 # --- Runtime stage: install from wheels ---
 FROM ${BASE_IMAGE}
 
-LABEL summary="OpenStack Designate (central, mdns, producer, sink)" \
-      io.k8s.description="Consolidated Designate central, mdns, producer, and sink services built from source with the kolla interface"
+LABEL summary="OpenStack Designate Worker" \
+      io.k8s.description="Designate worker service built from source with the kolla interface"
 
 # Create the designate user (UID 42411)
 RUN uid_gid_manage designate
 
 # Install non-Python system dependencies
 COPY bindeps.txt /tmp/bindeps.txt
-RUN pkgs=$(cat /tmp/bindeps.txt | grep -v '^#' | grep -v '^$' | tr '\n' ' ') && \
+COPY designate-worker/bindeps.txt /tmp/bindeps-extra.txt
+RUN pkgs=$(cat /tmp/bindeps.txt /tmp/bindeps-extra.txt | grep -v '^#' | grep -v '^$' | tr '\n' ' ') && \
     if [ -n "${pkgs}" ]; then microdnf -y install ${pkgs} && microdnf clean all; fi && \
-    rm -f /tmp/bindeps.txt
+    rm -f /tmp/bindeps.txt /tmp/bindeps-extra.txt
 
 # Install source-built wheels + their deps from PyPI + extra Python deps
 COPY --from=build /wheels /wheels
@@ -96,8 +101,21 @@ RUN extrapkgs=$(cat /tmp/pythondeps.txt | grep -v '^#' | grep -v '^$' | tr '\n' 
     rm -rf /wheels /tmp/pythondeps.txt
 
 # Create required directories
-RUN mkdir -p /etc/designate /var/log/designate /var/lib/designate && \
+RUN mkdir -p /etc/designate /var/log/designate /var/lib/designate /usr/share/designate/rootwrap && \
     chown -R designate:designate /etc/designate /var/log/designate /var/lib/designate && \
     chmod 750 /var/log/designate
+
+# Install config files — each file listed explicitly
+# From upstream source (via build stage):
+COPY --from=build /configfiles/etc/designate/rootwrap.conf /etc/designate/rootwrap.conf
+COPY --from=build /configfiles/usr/share/designate/rootwrap/ /usr/share/designate/rootwrap/
+# From common config (repo-maintained):
+COPY common/designate-sudoers /etc/sudoers.d/designate-sudoers
+
+# Set config file permissions
+RUN chmod 640 /etc/designate/rootwrap.conf && \
+    chmod 750 /etc/sudoers.d && \
+    chmod 440 /etc/sudoers.d/designate-sudoers && \
+    chown -R designate:designate /etc/designate
 
 USER designate

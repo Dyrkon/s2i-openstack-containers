@@ -10,6 +10,7 @@ openstack_version:
       - designateCentralImage
       - designateMdnsImage
       - designateProducerImage
+    designate/designate-worker:
       - designateWorkerImage
     designate/designate-api:
       - designateAPIImage
