@@ -24,7 +24,7 @@ runs:
       run: |
         set +o pipefail
         services=$(gh pr diff "${{ github.event.pull_request.number }}" --name-only \
-          | grep '^containers/' \
+          | grep '^containers/[^/]*/.' \
           | cut -d/ -f2 \
           | sort -u \
           | tr '\n' ' ')
