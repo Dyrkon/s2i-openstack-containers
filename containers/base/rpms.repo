@@ -15,13 +15,6 @@ enabled=1
 gpgcheck=0
 module_hotfixes=1
 
-[centos10-rabbitmq]
-name=centos9-rabbitmq
-baseurl=https://trunk.rdoproject.org/centos10-master/rabbitmq/
-enabled=1
-gpgcheck=0
-module_hotfixes=1
-
 [centos10-storage]
 name=centos10-storage
 baseurl=http://mirror.stream.centos.org/SIGs/10-stream/storage/$basearch/ceph-tentacle/
@@ -68,5 +61,11 @@ gpgcheck=0
 [centos10-crb]
 name=CentOS Stream 10 - CRB
 baseurl=http://mirror.stream.centos.org/10-stream/CRB/$basearch/os/
+enabled=1
+gpgcheck=0
+
+[centos10-messaging-sig-rabbitmq4]
+name=CentOS Stream 10 - Messaging SIG - RabbitMQ 4
+baseurl=http://mirror.stream.centos.org/SIGs/10-stream/messaging/$basearch/rabbitmq-4/
 enabled=1
 gpgcheck=0

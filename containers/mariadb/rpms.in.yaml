@@ -1,0 +1,27 @@
+contentOrigin:
+  repofiles:
+    - ./rpms.repo
+context:
+  bare: true
+
+#
+# To update rpms.lock.yaml:
+#    rpm-lockfile-prototype rpms.in.yaml
+#
+
+arches:
+  - x86_64
+  - aarch64
+
+packages:
+  - galera
+  - hostname
+  - jq
+  - mariadb
+  - mariadb-backup
+  - mariadb-server-galera
+  - mariadb-server-utils
+  - rsync
+  - socat
+  - stunnel
+  - tar
