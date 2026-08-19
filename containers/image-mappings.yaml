@@ -8,6 +8,11 @@ openstack_version:
       - aodhNotifierImage
     glance/glance-api:
       - glanceAPIImage
+    heat/heat-api:
+      - heatAPIImage
+      - heatCfnapiImage
+    heat/heat-engine:
+      - heatEngineImage
     manila/manila-api:
       - manilaAPIImage
     manila/manila-scheduler:
