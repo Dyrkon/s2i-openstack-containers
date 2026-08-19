@@ -1,0 +1,5 @@
+#! /usr/bin/python3 -sP
+# Replaces the removed keystone-wsgi-public / keystone-wsgi-admin PBR scripts.
+# keystone-operator httpd.conf uses WSGIScriptAlias /usr/bin/keystone-wsgi-public
+
+from keystone.wsgi.api import application
