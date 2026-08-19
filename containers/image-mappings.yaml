@@ -1,6 +1,11 @@
 ---
 openstack_version:
   custom_container_images:
+    aodh/aodh-api:
+      - aodhAPIImage
+      - aodhEvaluatorImage
+      - aodhListenerImage
+      - aodhNotifierImage
     glance/glance-api:
       - glanceAPIImage
     manila/manila-api:
