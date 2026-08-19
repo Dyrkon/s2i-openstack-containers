@@ -14,9 +14,9 @@ arches:
   - aarch64
 
 packages:
-  - openvswitch
-  - openvswitch-ovn-central
-  - openvswitch-ovn-common
-  - openvswitch-ovn-host
-  - python3-openvswitch
+  - openvswitch3.5
+  - ovn26.03
+  - ovn26.03-central
+  - ovn26.03-host
+  - python3-openvswitch3.5
   - tcpdump

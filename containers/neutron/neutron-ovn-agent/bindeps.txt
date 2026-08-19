@@ -12,7 +12,7 @@ haproxy
 # Routing daemon suite used for BGP/dynamic routing functionality
 frr
 # OVS CLI used to interact with the local vswitch
-openvswitch
+openvswitch3.5
 # Network namespace and connection tracking tooling used by the agent
 iproute
 conntrack-tools

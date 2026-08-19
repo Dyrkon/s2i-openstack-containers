@@ -10,7 +10,7 @@ python3-unbound
 # Implements the per-network metadata proxy process
 haproxy
 # OVS CLI used to discover OVN metadata ports/namespaces
-openvswitch
+openvswitch3.5
 # Network namespace tooling used by the agent
 iproute
 # Container runtime used to manage per-namespace agent helper processes

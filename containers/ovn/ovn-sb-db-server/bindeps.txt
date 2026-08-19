@@ -1,6 +1,6 @@
 # Open vSwitch / OVN common runtime packages
-openvswitch
-openvswitch-ovn-common
-python3-openvswitch
+openvswitch3.5
+ovn26.03
+python3-openvswitch3.5
 # ovsdb-server binaries and schemas for the OVN southbound DB
-openvswitch-ovn-central
+ovn26.03-central

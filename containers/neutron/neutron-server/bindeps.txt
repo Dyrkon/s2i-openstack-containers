@@ -7,8 +7,8 @@ python3-pip
 # pin once pyOpenSSL >= 25.0 lands in upper-constraints (drops the <44 cap).
 python3-cryptography-43.0.0-4.el10
 python3-unbound
-python3-openvswitch
-openvswitch
+python3-openvswitch3.5
+openvswitch3.5
 # Apache WSGI server for the neutron API
 httpd
 mod_ssl
