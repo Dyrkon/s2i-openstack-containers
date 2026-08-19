@@ -28,8 +28,18 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: ./.github/actions/setup-tox
 
-      - name: Regenerate from committed source pins
-        run: tox -e update-lockfiles
+      - uses: ./.github/actions/detect-changed-services
+        id: changes
+
+      - name: Regenerate from committed source pins (changed services only)
+        env:
+          UPDATE_LOCKFILES_TARGETS: ${{ steps.changes.outputs.services }}
+        run: |
+          if [ -n "${UPDATE_LOCKFILES_TARGETS}" ]; then
+            tox -e update-lockfiles -- ${UPDATE_LOCKFILES_TARGETS}
+          else
+            echo "No change detected in containerfiles"
+          fi
 
       - name: Require reproducible generated files
         run: |

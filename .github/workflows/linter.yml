@@ -22,5 +22,3 @@ jobs:
 
       - name: Lint content
         run: tox -e linters
-        env:
-          UPDATE_LOCKFILES_TARGETS: ${{ steps.changes.outputs.services }}
