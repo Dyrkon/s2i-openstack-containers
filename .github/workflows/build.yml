@@ -21,11 +21,37 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: ./.github/actions/setup-tox
 
+      - uses: ./.github/actions/detect-changed-services
+        id: changes
+
+      - name: Cache container storage
+        uses: actions/cache@v3
+        with:
+          path: ~/.local/share/containers/storage
+          key: containers-${{ hashFiles('containers/**/sources.txt', 'containers/**/Containerfile') }}
+          restore-keys: |
+            containers-${{ hashFiles('containers/**/sources.txt') }}-
+            containers-
+
+      - name: Cache pip packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ hashFiles('containers/**/requirements.lock.*') }}
+          restore-keys: |
+            pip-
+
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y buildah podman
 
-      - name: Build images
-        run: tox -e build
+      - name: Build changed images
+        run: |
+          if [ -n "${{ steps.changes.outputs.services }}" ]; then
+            echo "Building changed services: base ${{ steps.changes.outputs.services }}"
+            tox -e build -- base ${{ steps.changes.outputs.services }}
+          else
+            echo "No service changes detected, skipping build"
+          fi
 
       - name: list images
         run: podman images
