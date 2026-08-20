@@ -106,7 +106,11 @@ SKIP_HASH_UPDATE="${SKIP_HASH_UPDATE:-}"
 PIP_NO_BINARY="${PIP_NO_BINARY:-}"
 REGISTRY_AUTH_FILE="${REGISTRY_AUTH_FILE:-}"
 REGISTRY_CERT_DIR="${REGISTRY_CERT_DIR:-}"
-PARALLEL="${PARALLEL:-$(nproc)}"
+if [[ "$(uname -s)" == "Darwin" ]]; then
+  PARALLEL="${PARALLEL:-$(sysctl -n hw.logicalcpu)}"
+else
+  PARALLEL="${PARALLEL:-$(nproc)}"
+fi
 
 # Discover all buildable images from the directory structure.
 discover_images() {
