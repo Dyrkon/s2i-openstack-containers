@@ -59,7 +59,6 @@ RUN for src_dir in /src/*/ /src/overrides/*/; do \
 
 RUN mkdir -p /configfiles/etc/heat/templates && \
     cp -a ${SERVICE_SRC}/etc/heat/api-paste.ini /configfiles/etc/heat/ && \
-    cp -a ${SERVICE_SRC}/etc/heat/templates/AWS_CloudWatch_Alarm.yaml /configfiles/etc/heat/templates/ && \
     cp -a ${SERVICE_SRC}/etc/heat/templates/AWS_RDS_DBInstance.yaml /configfiles/etc/heat/templates/
 
 # --- Runtime stage ---
@@ -94,7 +93,6 @@ RUN mkdir -p /etc/heat /var/log/heat /var/lib/heat && \
 
 # Install config files — each file listed explicitly
 COPY --from=build /configfiles/etc/heat/api-paste.ini /etc/heat/api-paste.ini
-COPY --from=build /configfiles/etc/heat/templates/AWS_CloudWatch_Alarm.yaml /etc/heat/templates/AWS_CloudWatch_Alarm.yaml
 COPY --from=build /configfiles/etc/heat/templates/AWS_RDS_DBInstance.yaml /etc/heat/templates/AWS_RDS_DBInstance.yaml
 
 # Set config file permissions
