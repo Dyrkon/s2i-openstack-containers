@@ -1,0 +1,216 @@
+ARG BASE_IMAGE=localhost/openstack/openstack-base:latest
+
+# --- Build stage: compile wheels and collect upstream config ---
+FROM ${BASE_IMAGE} AS build
+
+ARG SERVICE_SRC=/src/horizon
+
+ARG CONSTRAINTS_FILE=requirements.lock
+COPY ${CONSTRAINTS_FILE} /deps-upper-constraints.txt
+COPY src/ /src/
+COPY horizon/src/ /src/
+
+ARG PIP_NO_BINARY=""
+ENV PIP_NO_BINARY=${PIP_NO_BINARY}
+# Required to build Rust-based Python packages from source
+ENV MATURIN_NO_INSTALL_RUST=true
+
+COPY horizon/builddeps.txt /tmp/builddeps.txt
+RUN pkgs=$(cat /tmp/builddeps.txt | grep -v '^#' | grep -v '^$' | tr '\n' ' ') && \
+    if [ -n "${pkgs}" ]; then microdnf -y install ${pkgs} && microdnf clean all; fi
+
+COPY horizon/pythonbuilddeps.txt /tmp/pythonbuilddeps.txt
+RUN pkgs=$(cat /tmp/pythonbuilddeps.txt | grep -v '^#' | grep -v '^$' | tr '\n' ' ') && \
+    if [ -n "${pkgs}" ]; then pip3 install --no-cache-dir -c /deps-upper-constraints.txt ${pkgs}; fi && \
+    rm /tmp/pythonbuilddeps.txt
+
+RUN cp /deps-upper-constraints.txt /tmp/build-constraints.txt && \
+    for src_dir in /src/*/ /src/overrides/*/; do \
+      if [ -d "${src_dir}" ] && [ -f "${src_dir}/setup.cfg" ]; then \
+        pkg_name=$(grep -m1 '^name' "${src_dir}/setup.cfg" | sed 's/.*=\s*//'); \
+        sed -i "/^${pkg_name}[=!<>]/Id" /tmp/build-constraints.txt; \
+      fi; \
+    done
+
+RUN for pkg in /src/*/ /src/overrides/*/; do \
+      if [ -d "${pkg}" ] && [ -f "${pkg}/setup.cfg" -o -f "${pkg}/setup.py" -o -f "${pkg}/pyproject.toml" ]; then \
+        pip3 wheel --no-cache-dir --no-deps \
+          --wheel-dir=/wheels/pkgs "${pkg}"; \
+      fi; \
+    done
+
+RUN pip3 wheel --no-cache-dir --no-deps \
+      --find-links=/wheels/pkgs \
+      --wheel-dir=/wheels/deps -r /deps-upper-constraints.txt
+
+RUN for src_dir in /src/*/ /src/overrides/*/; do \
+      if [ -d "${src_dir}" ] && [ -f "${src_dir}/setup.cfg" ]; then \
+        pkg_name=$(grep -m1 '^name' "${src_dir}/setup.cfg" | sed 's/.*=\s*//'); \
+        commit=$(git -C "${src_dir}" rev-parse HEAD 2>/dev/null || echo "unknown"); \
+        version=$(ls /wheels/pkgs/${pkg_name//-/_}-*.whl 2>/dev/null | head -1 | sed 's/.*-\([0-9][^-]*\)-.*/\1/' || echo "unknown"); \
+        echo "${pkg_name},${commit},${version}"; \
+      fi; \
+    done > /source-built-packages.txt
+
+# Collect upstream config: local_settings example, policy files, manage.py
+RUN mkdir -p \
+        /configfiles/etc/openstack-dashboard/default_policies \
+        /configfiles/etc/openstack-dashboard/nova_policy.d \
+        /configfiles/etc/openstack-dashboard/local_settings.d \
+        /configfiles/usr/share/openstack-dashboard && \
+    cp -a ${SERVICE_SRC}/openstack_dashboard/local/local_settings.py.example \
+        /configfiles/etc/openstack-dashboard/local_settings && \
+    sed -i "/^DEBUG =.*/c\DEBUG = False" /configfiles/etc/openstack-dashboard/local_settings && \
+    printf '\n# Container defaults (python-django-horizon.spec + horizon-operator)\nWEBROOT = '\''/dashboard/'\''\nPOLICY_FILES_PATH = '\''/etc/openstack-dashboard'\''\nCOMPRESS_OFFLINE = True\n' \
+        >> /configfiles/etc/openstack-dashboard/local_settings && \
+    cp -a ${SERVICE_SRC}/openstack_dashboard/conf/cinder_policy.yaml /configfiles/etc/openstack-dashboard/ && \
+    cp -a ${SERVICE_SRC}/openstack_dashboard/conf/glance_policy.yaml /configfiles/etc/openstack-dashboard/ && \
+    cp -a ${SERVICE_SRC}/openstack_dashboard/conf/keystone_policy.yaml /configfiles/etc/openstack-dashboard/ && \
+    cp -a ${SERVICE_SRC}/openstack_dashboard/conf/neutron_policy.yaml /configfiles/etc/openstack-dashboard/ && \
+    cp -a ${SERVICE_SRC}/openstack_dashboard/conf/nova_policy.yaml /configfiles/etc/openstack-dashboard/ && \
+    cp -a ${SERVICE_SRC}/openstack_dashboard/conf/default_policies/README.txt /configfiles/etc/openstack-dashboard/default_policies/ && \
+    cp -a ${SERVICE_SRC}/openstack_dashboard/conf/default_policies/cinder.yaml /configfiles/etc/openstack-dashboard/default_policies/ && \
+    cp -a ${SERVICE_SRC}/openstack_dashboard/conf/default_policies/glance.yaml /configfiles/etc/openstack-dashboard/default_policies/ && \
+    cp -a ${SERVICE_SRC}/openstack_dashboard/conf/default_policies/keystone.yaml /configfiles/etc/openstack-dashboard/default_policies/ && \
+    cp -a ${SERVICE_SRC}/openstack_dashboard/conf/default_policies/neutron.yaml /configfiles/etc/openstack-dashboard/default_policies/ && \
+    cp -a ${SERVICE_SRC}/openstack_dashboard/conf/default_policies/nova.yaml /configfiles/etc/openstack-dashboard/default_policies/ && \
+    cp -a ${SERVICE_SRC}/openstack_dashboard/conf/nova_policy.d/api-extensions.yaml /configfiles/etc/openstack-dashboard/nova_policy.d/ && \
+    cp -a ${SERVICE_SRC}/openstack_dashboard/local/local_settings.d/_10_set_custom_theme.py.example /configfiles/etc/openstack-dashboard/local_settings.d/ && \
+    cp -a ${SERVICE_SRC}/openstack_dashboard/local/local_settings.d/_11_toggle_angular_features.py.example /configfiles/etc/openstack-dashboard/local_settings.d/ && \
+    cp -a ${SERVICE_SRC}/openstack_dashboard/local/local_settings.d/_2010_integration_tests_deprecated.py.example /configfiles/etc/openstack-dashboard/local_settings.d/ && \
+    cp -a ${SERVICE_SRC}/openstack_dashboard/local/local_settings.d/_20_integration_tests_scaffolds.py.example /configfiles/etc/openstack-dashboard/local_settings.d/ && \
+    cp -a ${SERVICE_SRC}/openstack_dashboard/local/local_settings.d/_9030_profiler_settings.py.example /configfiles/etc/openstack-dashboard/local_settings.d/ && \
+    cp -a ${SERVICE_SRC}/manage.py /configfiles/usr/share/openstack-dashboard/manage.py
+
+# --- Runtime stage: install from wheels ---
+FROM ${BASE_IMAGE}
+
+LABEL summary="OpenStack Horizon (dashboard + UI plugins)" \
+      io.k8s.description="Horizon dashboard (WSGI via httpd) built from source with kolla interface"
+
+# Plugins are installed in the image; kolla extend_start enables them when ENABLE_*=yes.
+# Defaults match TripleO/tcib (always-on for bundled dashboards). Override at runtime.
+ENV ENABLE_HEAT=yes \
+    ENABLE_IRONIC=yes \
+    ENABLE_MANILA=yes \
+    ENABLE_OCTAVIA=yes \
+    ENABLE_DESIGNATE=yes \
+    ENABLE_WATCHER=yes \
+    ENABLE_CLOUDKITTY=yes
+
+# kolla UID 42420; httpd still runs as apache (horizon-operator httpd.conf)
+RUN uid_gid_manage horizon
+
+COPY horizon/bindeps.txt /tmp/bindeps.txt
+RUN pkgs=$(cat /tmp/bindeps.txt | grep -v '^#' | grep -v '^$' | tr '\n' ' ') && \
+    if [ -n "${pkgs}" ]; then microdnf -y install ${pkgs} && microdnf clean all; fi && rm /tmp/bindeps.txt
+
+COPY --from=build /wheels /wheels
+COPY --from=build /tmp/build-constraints.txt /deps-upper-constraints.txt
+COPY --from=build /source-built-packages.txt /source-built-packages.txt
+COPY horizon/pythondeps.txt /tmp/pythondeps.txt
+RUN extrapkgs=$(cat /tmp/pythondeps.txt | grep -v '^#' | grep -v '^$' | tr '\n' ' ') && \
+    pip3 install --no-cache-dir --prefix=/usr \
+      -c /deps-upper-constraints.txt \
+      --find-links=/wheels/deps \
+      --find-links=/wheels/pkgs \
+      /wheels/pkgs/*.whl ${extrapkgs} && \
+    rm -rf /wheels /tmp/pythondeps.txt
+
+# Recreate the RPM/tcib layout expected by horizon-operator:
+#   /usr/share/openstack-dashboard/openstack_dashboard/wsgi.py
+#   /usr/share/openstack-dashboard/static
+#   /etc/openstack-dashboard/local_settings (no .py suffix)
+RUN pyver=$(python3 -c 'import sys; print("%d.%d" % (sys.version_info.major, sys.version_info.minor))') && \
+    site="/usr/lib/python${pyver}/site-packages" && \
+    mkdir -p /usr/share/openstack-dashboard/static /etc/openstack-dashboard/local_settings.d \
+             /etc/openstack-dashboard/default_policies /etc/openstack-dashboard/nova_policy.d \
+             /var/lib/openstack-dashboard /var/log/horizon /var/lib/kolla && \
+    mv "${site}/openstack_dashboard" /usr/share/openstack-dashboard/openstack_dashboard && \
+    ln -s /usr/share/openstack-dashboard/openstack_dashboard "${site}/openstack_dashboard" && \
+    ln -s /usr/share/openstack-dashboard/static "${site}/static" && \
+    chmod 750 /etc/openstack-dashboard /etc/openstack-dashboard/local_settings.d \
+              /var/lib/openstack-dashboard /var/log/horizon && \
+    chown root:apache /etc/openstack-dashboard /etc/openstack-dashboard/local_settings.d && \
+    chown apache:apache /var/lib/openstack-dashboard /var/log/horizon /var/lib/kolla
+
+COPY --from=build /configfiles/usr/share/openstack-dashboard/manage.py /usr/share/openstack-dashboard/manage.py
+RUN cp /usr/share/openstack-dashboard/manage.py /usr/bin/manage.py && \
+    chmod 755 /usr/share/openstack-dashboard/manage.py /usr/bin/manage.py
+
+COPY --from=build /configfiles/etc/openstack-dashboard/local_settings /etc/openstack-dashboard/local_settings
+COPY --from=build /configfiles/etc/openstack-dashboard/cinder_policy.yaml /etc/openstack-dashboard/cinder_policy.yaml
+COPY --from=build /configfiles/etc/openstack-dashboard/glance_policy.yaml /etc/openstack-dashboard/glance_policy.yaml
+COPY --from=build /configfiles/etc/openstack-dashboard/keystone_policy.yaml /etc/openstack-dashboard/keystone_policy.yaml
+COPY --from=build /configfiles/etc/openstack-dashboard/neutron_policy.yaml /etc/openstack-dashboard/neutron_policy.yaml
+COPY --from=build /configfiles/etc/openstack-dashboard/nova_policy.yaml /etc/openstack-dashboard/nova_policy.yaml
+COPY --from=build /configfiles/etc/openstack-dashboard/default_policies/README.txt /etc/openstack-dashboard/default_policies/README.txt
+COPY --from=build /configfiles/etc/openstack-dashboard/default_policies/cinder.yaml /etc/openstack-dashboard/default_policies/cinder.yaml
+COPY --from=build /configfiles/etc/openstack-dashboard/default_policies/glance.yaml /etc/openstack-dashboard/default_policies/glance.yaml
+COPY --from=build /configfiles/etc/openstack-dashboard/default_policies/keystone.yaml /etc/openstack-dashboard/default_policies/keystone.yaml
+COPY --from=build /configfiles/etc/openstack-dashboard/default_policies/neutron.yaml /etc/openstack-dashboard/default_policies/neutron.yaml
+COPY --from=build /configfiles/etc/openstack-dashboard/default_policies/nova.yaml /etc/openstack-dashboard/default_policies/nova.yaml
+COPY --from=build /configfiles/etc/openstack-dashboard/nova_policy.d/api-extensions.yaml /etc/openstack-dashboard/nova_policy.d/api-extensions.yaml
+COPY --from=build /configfiles/etc/openstack-dashboard/local_settings.d/_10_set_custom_theme.py.example /etc/openstack-dashboard/local_settings.d/_10_set_custom_theme.py.example
+COPY --from=build /configfiles/etc/openstack-dashboard/local_settings.d/_11_toggle_angular_features.py.example /etc/openstack-dashboard/local_settings.d/_11_toggle_angular_features.py.example
+COPY --from=build /configfiles/etc/openstack-dashboard/local_settings.d/_2010_integration_tests_deprecated.py.example /etc/openstack-dashboard/local_settings.d/_2010_integration_tests_deprecated.py.example
+COPY --from=build /configfiles/etc/openstack-dashboard/local_settings.d/_20_integration_tests_scaffolds.py.example /etc/openstack-dashboard/local_settings.d/_20_integration_tests_scaffolds.py.example
+COPY --from=build /configfiles/etc/openstack-dashboard/local_settings.d/_9030_profiler_settings.py.example /etc/openstack-dashboard/local_settings.d/_9030_profiler_settings.py.example
+
+# Symlink /etc config into the Django package tree (RPM layout)
+RUN ln -sf /etc/openstack-dashboard/local_settings \
+        /usr/share/openstack-dashboard/openstack_dashboard/local/local_settings.py && \
+    rm -rf /usr/share/openstack-dashboard/openstack_dashboard/local/local_settings.d && \
+    ln -sf /etc/openstack-dashboard/local_settings.d \
+        /usr/share/openstack-dashboard/openstack_dashboard/local/local_settings.d && \
+    sed -i '/^COMPRESS_PARSER = .*/a COMPRESS_OFFLINE = True' \
+        /usr/share/openstack-dashboard/openstack_dashboard/settings.py && \
+    sed -i 's:COMPRESS_OFFLINE.=.False:COMPRESS_OFFLINE = True:' \
+        /usr/share/openstack-dashboard/openstack_dashboard/settings.py && \
+    rm -f /usr/share/openstack-dashboard/openstack_dashboard/local/enabled/?[!_]*.py* && \
+    chmod 640 /etc/openstack-dashboard/local_settings \
+              /etc/openstack-dashboard/cinder_policy.yaml \
+              /etc/openstack-dashboard/glance_policy.yaml \
+              /etc/openstack-dashboard/keystone_policy.yaml \
+              /etc/openstack-dashboard/neutron_policy.yaml \
+              /etc/openstack-dashboard/nova_policy.yaml \
+              /etc/openstack-dashboard/default_policies/README.txt \
+              /etc/openstack-dashboard/default_policies/cinder.yaml \
+              /etc/openstack-dashboard/default_policies/glance.yaml \
+              /etc/openstack-dashboard/default_policies/keystone.yaml \
+              /etc/openstack-dashboard/default_policies/neutron.yaml \
+              /etc/openstack-dashboard/default_policies/nova.yaml \
+              /etc/openstack-dashboard/nova_policy.d/api-extensions.yaml \
+              /etc/openstack-dashboard/local_settings.d/_10_set_custom_theme.py.example \
+              /etc/openstack-dashboard/local_settings.d/_11_toggle_angular_features.py.example \
+              /etc/openstack-dashboard/local_settings.d/_2010_integration_tests_deprecated.py.example \
+              /etc/openstack-dashboard/local_settings.d/_20_integration_tests_scaffolds.py.example \
+              /etc/openstack-dashboard/local_settings.d/_9030_profiler_settings.py.example && \
+    chown -R root:apache /etc/openstack-dashboard && \
+    chown -R apache:apache /usr/share/openstack-dashboard
+
+# Compile message catalogs (spec %build + tcib compilemessages loop)
+RUN pyver="$(python3 -c 'import sys; print("%d.%d" % sys.version_info[:2])')" && \
+    find "/usr/lib/python${pyver}/site-packages" \
+         -mindepth 2 -maxdepth 2 -type d -name locale \
+         -execdir django-admin compilemessages \; || true; \
+    find /usr/share/openstack-dashboard/openstack_dashboard \
+         -mindepth 1 -maxdepth 1 -type d -name locale \
+         -execdir django-admin compilemessages \; || true
+
+# Pre-compress static assets; kolla_extend_start re-runs if settings change
+RUN python3 /usr/bin/manage.py collectstatic --noinput --clear && \
+    python3 /usr/bin/manage.py compress --force && \
+    chown -R apache:apache /usr/share/openstack-dashboard/static \
+                           /usr/share/openstack-dashboard/openstack_dashboard/themes
+
+COPY horizon/scripts/extend_start.sh /usr/local/bin/kolla_extend_start
+RUN chmod 755 /usr/local/bin/kolla_extend_start
+
+# Apache httpd setup for WSGI (operator overwrites httpd.conf at runtime)
+RUN sed -i -r 's,^(Listen 80),#\1,' /etc/httpd/conf/httpd.conf && \
+    sed -i -r 's,^(Listen 443),#\1,' /etc/httpd/conf.d/ssl.conf 2>/dev/null || true && \
+    usermod --append --groups apache horizon
+
+# Stay root so httpd can drop to apache (horizon-operator: User apache).
+# tcib horizon.yaml has no tcib_user.

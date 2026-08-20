@@ -29,3 +29,5 @@ openstack_version:
       - watcherAPIImage
       - watcherApplierImage
       - watcherDecisionEngineImage
+    horizon/horizon:
+      - horizonImage

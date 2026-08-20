@@ -1,0 +1,4 @@
+# Django MySQL backend (tcib: python3-PyMySQL)
+PyMySQL
+# Memcached backend used by horizon-operator (PyMemcacheCache)
+pymemcache
