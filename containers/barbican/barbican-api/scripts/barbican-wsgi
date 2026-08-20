@@ -1,0 +1,14 @@
+#! /usr/bin/python3 -sP
+# PBR-style WSGI script. barbican-operator httpd.conf uses
+# WSGIScriptAlias / "/var/www/cgi-bin/barbican/main"
+
+import threading
+
+from barbican.api.app import get_api_wsgi_script
+
+application = None
+app_lock = threading.Lock()
+
+with app_lock:
+    if application is None:
+        application = get_api_wsgi_script()
