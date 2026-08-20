@@ -158,6 +158,7 @@ eventlet===0.41.0
 openstack-doc-tools===4.0.3
 oslo.messaging===18.2.0
 jira===3.10.5
+junitxml===0.7
 PyJWT===2.13.0
 typing_extensions===4.15.0
 zVMCloudConnector===1.6.3
