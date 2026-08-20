@@ -528,7 +528,12 @@ for a commit shares the same `master-<sha>` tag and consistent OS packages.
 
 4. Fill in the dependency files for the image.
 
-5. Run update-sources and build:
+5. Update the README with the images being built.
+
+6. Update containers/image-mappings.yaml to map the image to an Image var in
+   [openstackversions.spec.customContainerImages](https://github.com/openstack-k8s-operators/openstack-operator/blob/main/api/bases/core.openstack.org_openstackversions.yaml)
+
+7. Run update-sources and build:
 
    ```bash
    STREAM=master ./build.sh update-sources <project>
