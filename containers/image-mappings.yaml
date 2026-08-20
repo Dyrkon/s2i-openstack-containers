@@ -19,6 +19,12 @@ openstack_version:
       - manilaSchedulerImage
     manila/manila-share:
       - manilaShareImage
+    octavia/octavia-api:
+      - octaviaAPIImage
+    octavia/octavia-worker:
+      - octaviaWorkerImage
+      - octaviaHousekeepingImage
+      - octaviaHealthmanagerImage
     watcher/watcher-base:
       - watcherAPIImage
       - watcherApplierImage
