@@ -6,6 +6,18 @@ openstack_version:
       - aodhEvaluatorImage
       - aodhListenerImage
       - aodhNotifierImage
+    designate/designate-central:
+      - designateCentralImage
+      - designateMdnsImage
+      - designateProducerImage
+    designate/designate-worker:
+      - designateWorkerImage
+    designate/designate-api:
+      - designateAPIImage
+    designate/designate-backend-bind9:
+      - designateBackendbind9Image
+    designate/unbound:
+      - designateUnboundImage
     glance/glance-api:
       - glanceAPIImage
     heat/heat-api:

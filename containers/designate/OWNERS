@@ -1,0 +1,12 @@
+# See the OWNERS docs at https://www.kubernetes.dev/docs/guide/owners/
+approvers:
+  - beagles
+  - richardcruise87
+  - omersch381
+  - gthiemonge
+
+reviewers:
+  - beagles
+  - richardcruise87
+  - omersch381
+  - gthiemonge
