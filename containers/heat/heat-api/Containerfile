@@ -89,18 +89,17 @@ RUN extrapkgs=$(cat /tmp/pythondeps.txt | grep -v '^#' | grep -v '^$' | tr '\n' 
     rm -rf /wheels /tmp/pythondeps.txt
 
 # Create required directories
-RUN mkdir -p /etc/heat /var/log/heat /var/lib/heat /usr/share/heat && \
-    chown -R heat:heat /etc/heat /var/log/heat /var/lib/heat /usr/share/heat
+RUN mkdir -p /etc/heat /var/log/heat /var/lib/heat && \
+    chown -R heat:heat /etc/heat /var/log/heat /var/lib/heat
 
 # Install config files — each file listed explicitly
 COPY --from=build /configfiles/etc/heat/api-paste.ini /etc/heat/api-paste.ini
 COPY --from=build /configfiles/etc/heat/templates/AWS_CloudWatch_Alarm.yaml /etc/heat/templates/AWS_CloudWatch_Alarm.yaml
 COPY --from=build /configfiles/etc/heat/templates/AWS_RDS_DBInstance.yaml /etc/heat/templates/AWS_RDS_DBInstance.yaml
-COPY common/config/usr/share/heat/heat-dist.conf /usr/share/heat/heat-dist.conf
 
 # Set config file permissions
 RUN chmod 640 /etc/heat/api-paste.ini && \
-    chown -R heat:heat /etc/heat /usr/share/heat
+    chown -R heat:heat /etc/heat
 
 # Apache httpd setup for WSGI
 RUN sed -i -r 's,^(Listen 80),#\1,' /etc/httpd/conf/httpd.conf && \
