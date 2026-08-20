@@ -25,6 +25,8 @@ openstack_version:
       - heatCfnapiImage
     heat/heat-engine:
       - heatEngineImage
+    keystone/keystone:
+      - keystoneAPIImage
     manila/manila-api:
       - manilaAPIImage
     manila/manila-scheduler:
