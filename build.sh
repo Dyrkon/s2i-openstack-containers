@@ -641,9 +641,12 @@ update_sources_file() {
 
 # Collect Python package names provided via RPMs from bindeps.txt and
 # builddeps.txt across a project and its images.  RPM packages for Python
-# modules follow the convention python3-<module>.  Returns normalized pip
-# package names (lowercase, dots/underscores replaced with hyphens) one per
-# line.
+# modules follow the convention python3-<module>.  Entries may use a plain
+# name (python3-cryptography) or a full NVR
+# (python3-cryptography-43.0.0-4.el10); version-release is stripped when
+# the release segment matches a distro tag (e.g. *.el10).
+# Returns normalized pip package names (lowercase, dots/underscores replaced
+# with hyphens) one per line.
 collect_rpm_python_packages() {
   local project_dir="$1"
   local -A seen
@@ -656,6 +659,9 @@ collect_rpm_python_packages() {
       [[ -z "${line}" ]] && continue
       if [[ "${line}" == python3-* ]]; then
         local pkg="${line#python3-}"
+        if [[ "${pkg}" =~ ^(.+)-[^-]+-[0-9]+\.el[0-9]+$ ]]; then
+          pkg="${BASH_REMATCH[1]}"
+        fi
         pkg=$(echo "${pkg}" | tr '[:upper:]' '[:lower:]' | sed 's/[._]/-/g')
         seen["${pkg}"]=1
       fi
@@ -676,6 +682,9 @@ collect_rpm_python_packages() {
         [[ -z "${line}" ]] && continue
         if [[ "${line}" == python3-* ]]; then
           local pkg="${line#python3-}"
+          if [[ "${pkg}" =~ ^(.+)-[^-]+-[0-9]+\.el[0-9]+$ ]]; then
+            pkg="${BASH_REMATCH[1]}"
+          fi
           pkg=$(echo "${pkg}" | tr '[:upper:]' '[:lower:]' | sed 's/[._]/-/g')
           seen["${pkg}"]=1
         fi
