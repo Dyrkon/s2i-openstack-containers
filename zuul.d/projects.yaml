@@ -4,9 +4,10 @@
     github-check:
       jobs:
         - s2i-openstack-containers-molecule:
-            irrelevant-files: &documentation-only
+            irrelevant-files: &irrelevant-for-zuul
+              - ^.github/.*
               - ^docs/.*
               - ^.*\.md$
               - ^LICENSE.*$
         - s2i-openstack-container-content-provider:
-            irrelevant-files: *documentation-only
+            irrelevant-files: *irrelevant-for-zuul
