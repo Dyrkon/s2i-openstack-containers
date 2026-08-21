@@ -155,6 +155,13 @@ entry per line (blank lines and `#` comments are ignored):
 - **`pythondeps.txt`** -- Extra Python packages installed via pip in the
   final image (database drivers, caching backends, CLI clients).
 
+Entries in `bindeps.txt` and `builddeps.txt` can use either a plain package
+name (e.g. `python3-cryptography`) or a full NVR
+(name-version-release, e.g. `python3-cryptography-43.0.0-4.el10`) to pin a
+specific RPM version. When a `python3-*` entry uses a full NVR, the
+version-release suffix is automatically stripped to derive the pip package
+name for lockfile filtering.
+
 The base image (`containers/base/`) also has `bindeps.txt` and `pythondeps.txt`
 for packages shared across all service images.
 

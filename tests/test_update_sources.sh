@@ -399,6 +399,19 @@ test_lockfile_excludes_rpm_python_packages() {
   assert_grep "Filtering RPM-provided packages" "${TEST_DIR}/build.log"
 }
 
+test_lockfile_excludes_rpm_python_packages_nvr() {
+  command -v pip-compile >/dev/null 2>&1 || skip_test "pip-compile not on PATH"
+
+  printf 'python3\npython3-six-1.17.0-1.el10\n' > "${TEST_DIR}/containers/test-svc/test-svc/bindeps.txt"
+
+  _run_build STREAM=master
+
+  local lock="${TEST_DIR}/containers/test-svc/requirements.lock.master"
+  assert_file_exists "${lock}"
+  assert_no_grep "^six==" "${lock}"
+  assert_grep "Filtering RPM-provided packages" "${TEST_DIR}/build.log"
+}
+
 test_preexisting_checkout_is_preserved() {
   local src_dir="${TEST_DIR}/containers/test-svc/src/test-svc"
   mkdir -p "${src_dir}"
@@ -576,6 +589,20 @@ test_update_lockfiles_filters_rpm_packages() {
   assert_no_grep "^six==" "${lock}"
 }
 
+test_update_lockfiles_filters_rpm_packages_nvr() {
+  command -v pip-compile >/dev/null 2>&1 || skip_test "pip-compile not on PATH"
+
+  _run_build STREAM=master
+
+  printf 'python3\npython3-six-1.17.0-1.el10\n' > "${TEST_DIR}/containers/test-svc/test-svc/bindeps.txt"
+
+  _run_cmd STREAM=master -- update-lockfiles test-svc
+
+  local lock="${TEST_DIR}/containers/test-svc/requirements.lock.master"
+  assert_file_exists "${lock}"
+  assert_no_grep "^six==" "${lock}"
+}
+
 test_update_lockfiles_does_not_modify_sources() {
   command -v pip-compile >/dev/null 2>&1 || skip_test "pip-compile not on PATH"
 
@@ -705,6 +732,7 @@ TESTS=(
   test_hash_in_branch_field_upper_constraints
   test_hash_in_branch_field_regular_repo
   test_lockfile_excludes_rpm_python_packages
+  test_lockfile_excludes_rpm_python_packages_nvr
   test_preexisting_checkout_is_preserved
   test_list_discovers_all_projects
   test_update_sources_multiple_targets
@@ -721,6 +749,7 @@ TESTS=(
   test_update_lockfiles_includes_pythondeps
   test_update_lockfiles_generates_buildrequirements
   test_update_lockfiles_filters_rpm_packages
+  test_update_lockfiles_filters_rpm_packages_nvr
   test_update_lockfiles_does_not_modify_sources
   test_update_lockfiles_multiple_targets
   test_update_lockfiles_creates_symlinks
