@@ -47,27 +47,6 @@
         buildset_registry_image: "{{ s2i_ci_registry_image }}"
         container_command: podman
 
-    - name: Find the socat tunnel PID for the buildset registry
-      when: s2i_ci_owns_buildset_registry | bool
-      ansible.builtin.shell:
-        cmd: >-
-          pgrep -f 'socat.*TCP.*LISTEN:{{ s2i_ci_registry_port }}' || true
-        executable: /bin/bash
-      register: s2i_ci_socat_pid_result
-      changed_when: false
-
-    - name: Record ownership of the started buildset registry
-      when: s2i_ci_owns_buildset_registry | bool
-      ansible.builtin.copy:
-        dest: "{{ s2i_ci_registry_root }}/.s2i-ci-registry-owner.json"
-        mode: "0600"
-        content: |
-          {{ {
-               'container': s2i_ci_registry_container_name,
-               'port': s2i_ci_registry_port,
-               'tunnel_pid': s2i_ci_socat_pid_result.stdout_lines | first | default('')
-             } | to_nice_json }}
-
     # Workaround: the run-buildset-registry role from zuul-jobs does not
     # mount volumes with :Z labels. On SELinux-enforcing nodes the registry
     # cannot access its TLS/conf directories. Remove and recreate with
@@ -95,7 +74,7 @@
           - --detach
           - "--name={{ s2i_ci_registry_container_name }}"
           - --restart=always
-          - "--publish=1{{ s2i_ci_registry_port }}:5000"
+          - "--net=host"
           - "--volume={{ s2i_ci_registry_root }}/tls:/tls:Z"
           - "--volume={{ s2i_ci_registry_root }}/conf:/conf:Z"
           - "{{ s2i_ci_registry_image }}"
