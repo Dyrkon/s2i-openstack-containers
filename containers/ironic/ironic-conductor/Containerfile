@@ -1,0 +1,152 @@
+# OpenStack Ironic Conductor + PXE
+#
+# This image serves ironic-conductor, ironic-pxe (boot file serving via httpd),
+# ironic-pxe-filter, and dnsmasq-tftp-server.
+# The service to run is selected by the config.json "command" field.
+
+ARG BASE_IMAGE=localhost/openstack/openstack-base:latest
+
+# --- Build stage: compile wheels and collect upstream config ---
+FROM ${BASE_IMAGE} AS build
+
+ARG SERVICE_SRC=/src/ironic
+
+# Copy constraints file and all source repos into the build stage
+ARG CONSTRAINTS_FILE=requirements.lock
+COPY ${CONSTRAINTS_FILE} /deps-upper-constraints.txt
+COPY src/ /src/
+COPY ironic-conductor/src/ /src/
+
+# We can force build from source of all packages optionally
+ARG PIP_NO_BINARY=""
+ENV PIP_NO_BINARY=${PIP_NO_BINARY}
+# required to build rpds-py from source
+ENV MATURIN_NO_INSTALL_RUST=true
+
+COPY ironic-conductor/builddeps.txt /tmp/builddeps.txt
+RUN pkgs=$(cat /tmp/builddeps.txt | grep -v '^#' | grep -v '^$' | tr '\n' ' ') && \
+    if [ -n "${pkgs}" ]; then microdnf -y install ${pkgs} && microdnf clean all; fi
+
+COPY ironic-conductor/pythonbuilddeps.txt /tmp/pythonbuilddeps.txt
+RUN pkgs=$(cat /tmp/pythonbuilddeps.txt | grep -v '^#' | grep -v '^$' | tr '\n' ' ') && \
+    if [ -n "${pkgs}" ]; then pip3 install --no-cache-dir -c /deps-upper-constraints.txt ${pkgs}; fi && \
+    rm /tmp/pythonbuilddeps.txt
+
+# Generate a filtered constraints file that excludes packages we build from source.
+RUN cp /deps-upper-constraints.txt /tmp/build-constraints.txt && \
+    for src_dir in /src/*/ /src/overrides/*/; do \
+      if [ -d "${src_dir}" ] && [ -f "${src_dir}/setup.cfg" ]; then \
+        pkg_name=$(grep -m1 '^name' "${src_dir}/setup.cfg" | sed 's/.*=\s*//'); \
+        sed -i "/^${pkg_name}[=!<>]/Id" /tmp/build-constraints.txt; \
+      fi; \
+    done
+
+# First build the wheels for the packages themselves
+RUN for pkg in /src/*/ /src/overrides/*/; do \
+      if [ -d "${pkg}" ] && [ -f "${pkg}/setup.cfg" -o -f "${pkg}/setup.py" -o -f "${pkg}/pyproject.toml" ]; then \
+        pip3 wheel --no-cache-dir --no-deps \
+          --wheel-dir=/wheels/pkgs "${pkg}"; \
+      fi; \
+    done
+
+# Second, build the wheels for the dependencies and place them in a different directory
+RUN pip3 wheel --no-cache-dir --no-deps \
+      --find-links=/wheels/pkgs \
+      --wheel-dir=/wheels/deps -r /deps-upper-constraints.txt
+
+RUN for src_dir in /src/*/ /src/overrides/*/; do \
+      if [ -d "${src_dir}" ] && [ -f "${src_dir}/setup.cfg" ]; then \
+        pkg_name=$(grep -m1 '^name' "${src_dir}/setup.cfg" | sed 's/.*=\s*//'); \
+        commit=$(git -C "${src_dir}" rev-parse HEAD 2>/dev/null || echo "unknown"); \
+        version=$(ls /wheels/pkgs/${pkg_name//-/_}-*.whl 2>/dev/null | head -1 | sed 's/.*-\([0-9][^-]*\)-.*/\1/' || echo "unknown"); \
+        echo "${pkg_name},${commit},${version}"; \
+      fi; \
+    done > /source-built-packages.txt
+
+ENV PIP_NO_BINARY=""
+
+# Install wheels temporarily so entry points are available for config generation
+RUN pip3 install --no-cache-dir --prefix=/usr \
+      -c /tmp/build-constraints.txt \
+      --find-links=/wheels/deps \
+      --find-links=/wheels/pkgs \
+      /wheels/pkgs/*.whl
+
+# Generate default config and collect upstream config files
+RUN mkdir -p /configfiles/etc/ironic && \
+    oslo-config-generator \
+      --config-file ${SERVICE_SRC}/tools/config/ironic-config-generator.conf \
+      --output-file /configfiles/etc/ironic/ironic.conf && \
+    sed -i "/#pybasedir.*/d" /configfiles/etc/ironic/ironic.conf
+
+# Extract PXE boot assets (iPXE, GRUB2, shim) into structured directories
+COPY ironic-conductor/extract-boot-assets.sh /tmp/extract-boot-assets.sh
+RUN bash /tmp/extract-boot-assets.sh && rm /tmp/extract-boot-assets.sh
+
+# --- Runtime stage: install from wheels ---
+FROM ${BASE_IMAGE}
+
+LABEL summary="OpenStack Ironic Conductor + PXE" \
+      io.k8s.description="Ironic conductor and PXE boot server built from source with kolla interface"
+
+# Create the ironic user (UID 42422)
+RUN uid_gid_manage ironic
+
+# Install non-Python system dependencies
+COPY ironic-conductor/bindeps.txt /tmp/bindeps.txt
+RUN pkgs=$(cat /tmp/bindeps.txt | grep -v '^#' | grep -v '^$' | tr '\n' ' ') && \
+    if [ -n "${pkgs}" ]; then microdnf -y install ${pkgs} && microdnf clean all; fi && rm /tmp/bindeps.txt
+
+# Install source-built wheels + their deps from PyPI + extra Python deps
+COPY --from=build /wheels /wheels
+COPY --from=build /tmp/build-constraints.txt /deps-upper-constraints.txt
+COPY --from=build /source-built-packages.txt /source-built-packages.txt
+COPY ironic-conductor/pythondeps.txt /tmp/pythondeps.txt
+RUN extrapkgs=$(cat /tmp/pythondeps.txt | grep -v '^#' | grep -v '^$' | tr '\n' ' ') && \
+    pip3 install --no-cache-dir --prefix=/usr \
+      -c /deps-upper-constraints.txt \
+      --find-links=/wheels/deps \
+      --find-links=/wheels/pkgs \
+      /wheels/pkgs/*.whl ${extrapkgs} && \
+    rm -rf /wheels /tmp/pythondeps.txt
+
+# Create required directories
+RUN mkdir -p /etc/ironic && \
+    mkdir -p /var/log/ironic && chmod 750 /var/log/ironic && \
+    mkdir -p /var/lib/ironic && \
+    mkdir -p /tftpboot && \
+    chown -R ironic:ironic /etc/ironic /var/log/ironic /var/lib/ironic /tftpboot
+
+# Copy pre-extracted PXE boot assets from build stage
+COPY --from=build /usr/share/ironic-operator/var-lib-ironic /usr/share/ironic-operator/var-lib-ironic
+
+# Install config files — each file listed explicitly
+# From upstream source (via build stage):
+COPY --from=build /configfiles/etc/ironic/ironic.conf /etc/ironic/ironic.conf
+# From common config (repo-maintained):
+COPY common/config/etc/ironic/ironic-dist.conf /usr/share/ironic/ironic-dist.conf
+COPY common/config/etc/ironic/dnsmasq-tftp-server.conf /etc/ironic/dnsmasq-tftp-server.conf
+COPY common/config/etc/sudoers.d/ironic-sudoers /etc/sudoers.d/ironic
+
+# Set config file permissions
+RUN chmod 640 /etc/ironic/ironic.conf && \
+    chmod 640 /usr/share/ironic/ironic-dist.conf && \
+    chmod 644 /etc/ironic/dnsmasq-tftp-server.conf && \
+    chmod 750 /etc/sudoers.d && \
+    chmod 440 /etc/sudoers.d/ironic && \
+    chown -R ironic:ironic /etc/ironic
+
+# Apache httpd setup for PXE boot file serving
+RUN sed -i -r 's,^(Listen 80),#\1,' /etc/httpd/conf/httpd.conf && \
+    sed -i -r 's,^(Listen 443),#\1,' /etc/httpd/conf.d/ssl.conf 2>/dev/null || true && \
+    usermod --append --groups apache ironic && \
+    # Ensure the httpd run directory is writable by the ironic user (non-root)
+    # so that httpd can create its PID file and cgid socket
+    install -d -o ironic -g ironic /run/httpd && \
+    chown ironic:ironic /etc/httpd/run
+
+# kolla_extend_start sources kolla_httpd_setup for PXE httpd
+RUN printf '. /usr/local/bin/kolla_httpd_setup\n' > /usr/local/bin/kolla_extend_start && \
+    chmod 755 /usr/local/bin/kolla_extend_start
+
+USER ironic

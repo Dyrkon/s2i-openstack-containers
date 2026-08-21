@@ -1,0 +1,37 @@
+# Runtime system dependencies for ironic-conductor + PXE
+python3
+python3-pip
+# cryptography from RPM for certifications and CVE handling.
+# Pinned to 43.x to match upper-constraints.txt (cryptography==43.0.3).
+# The default el10 RPM ships 49.x which conflicts with pyOpenSSL 24.2.1
+# (requires cryptography<44), causing an ImportError at runtime. Bump this
+# pin once pyOpenSSL >= 25.0 lands in upper-constraints (drops the <44 cap).
+python3-cryptography-43.0.0-4.el10
+# python3-systemd has C bindings to libsystemd (cannot install via pip)
+python3-systemd
+# Conductor: disk/ISO/image tools
+cpio
+dosfstools
+e2fsprogs
+gdisk
+mtools
+parted
+qemu-img
+xfsprogs
+xorriso
+# Conductor: BMC and management tools
+ipmitool
+openssh-clients
+# Conductor: process management
+inotify-tools
+psmisc
+util-linux
+# Conductor: kickstart support
+pykickstart
+# PXE: boot infrastructure
+httpd
+mod_ssl
+dnsmasq
+iproute
+# Conductor: BIOS boot (not available on aarch64)
+syslinux-nonlinux

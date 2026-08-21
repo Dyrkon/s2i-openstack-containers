@@ -1,0 +1,59 @@
+contentOrigin:
+  repofiles:
+    - ./rpms.repo
+context:
+  bare: true
+
+#
+# To update rpms.lock.yaml:
+#    rpm-lockfile-prototype rpms.in.yaml
+#
+
+arches:
+  - x86_64
+  - aarch64
+
+packages:
+  - cargo
+  - cpio
+  - dnsmasq
+  - dosfstools
+  - e2fsprogs
+  - gcc
+  - gcc-c++
+  - gdisk
+  - git-core
+  - grub2-efi-x64
+  - httpd
+  - inotify-tools
+  - ipmitool
+  - iproute
+  - ipxe-bootimgs
+  - libffi
+  - libffi-devel
+  - libxml2
+  - libxml2-devel
+  - libxslt
+  - libxslt-devel
+  - mod_ssl
+  - mtools
+  - openssh-clients
+  - openssl-devel
+  - parted
+  - psmisc
+  - pykickstart
+  - python3
+  - python3-cryptography
+  - python3-cryptography-43.0.0-4.el10
+  - python3-devel
+  - python3-mod_wsgi
+  - python3-pip
+  - python3-setuptools
+  - python3-systemd
+  - qemu-img
+  - rust
+  - shim
+  - syslinux-nonlinux
+  - util-linux
+  - xfsprogs
+  - xorriso
