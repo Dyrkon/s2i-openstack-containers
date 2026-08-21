@@ -11,6 +11,7 @@ The repository currently builds:
 - `openstack-cyborg-agent`;
 - `openstack-glance-api`;
 - `openstack-keystone`;
+- `openstack-barbican-api`;
 - `openstack-manila-api`;
 - `openstack-manila-scheduler`;
 - `openstack-manila-share`;

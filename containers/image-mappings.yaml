@@ -6,6 +6,10 @@ openstack_version:
       - aodhEvaluatorImage
       - aodhListenerImage
       - aodhNotifierImage
+    barbican/barbican-api:
+      - barbicanAPIImage
+      - barbicanWorkerImage
+      - barbicanKeystoneListenerImage
     designate/designate-central:
       - designateCentralImage
       - designateMdnsImage
