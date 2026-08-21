@@ -12,7 +12,17 @@ on:
   workflow_dispatch:
 
 jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      services: ${{ steps.changes.outputs.services }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: ./.github/actions/detect-changed-services
+        id: changes
+
   build-and-push:
+    needs: detect-changes
     runs-on: ubuntu-latest
     env:
       REGISTRY: quay.io
@@ -24,11 +34,35 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: ./.github/actions/setup-tox
 
+      - name: Cache container storage
+        uses: actions/cache@v3
+        with:
+          path: ~/.local/share/containers/storage
+          key: containers-${{ hashFiles('containers/**/sources.txt', 'containers/**/Containerfile') }}
+          restore-keys: |
+            containers-${{ hashFiles('containers/**/sources.txt') }}-
+            containers-
+
+      - name: Cache pip packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ hashFiles('containers/**/requirements.lock.*') }}
+          restore-keys: |
+            pip-
+
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y buildah podman
 
       - name: Build images
-        run: tox -e build
+        run: |
+          if [ -n "${{ needs.detect-changes.outputs.services }}" ]; then
+            echo "Building changed services: base ${{ needs.detect-changes.outputs.services }}"
+            tox -e build -- base ${{ needs.detect-changes.outputs.services }}
+          else
+            echo "No service changes, building all (initial run or non-container changes)"
+            tox -e build
+          fi
 
       - name: list images
         id: built-images
