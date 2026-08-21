@@ -14,7 +14,7 @@ dnsmasq-utils
 # Router advertisement daemon for IPv6 deployments
 radvd
 # OVS CLI used by the interface driver to plug the DHCP port
-openvswitch
+openvswitch3.5
 # Network namespace and routing/firewall tooling used by the agent
 iproute
 iptables

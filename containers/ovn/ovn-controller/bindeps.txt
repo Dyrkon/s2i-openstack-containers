@@ -1,6 +1,6 @@
 # Open vSwitch / OVN common runtime packages
-openvswitch
-openvswitch-ovn-common
-python3-openvswitch
+openvswitch3.5
+ovn26.03
+python3-openvswitch3.5
 # ovn-controller host agent
-openvswitch-ovn-host
+ovn26.03-host
