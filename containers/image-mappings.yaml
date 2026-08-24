@@ -10,6 +10,9 @@ openstack_version:
       - barbicanAPIImage
       - barbicanWorkerImage
       - barbicanKeystoneListenerImage
+    cloudkitty/cloudkitty-api:
+      - cloudkittyAPIImage
+      - cloudkittyProcImage
     designate/designate-central:
       - designateCentralImage
       - designateMdnsImage
