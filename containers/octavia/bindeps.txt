@@ -8,3 +8,6 @@ python3-pip
 python3-cryptography-43.0.0-4.el10
 # Runtime library for C extensions (cffi/cryptography)
 libffi
+libxml2
+libxslt
+libpq
