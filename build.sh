@@ -1087,7 +1087,7 @@ generate_rpms_in_yaml() {
   fi
 
   local sorted_pkgs
-  sorted_pkgs=$(printf '%s\n' "${!pkgs_seen[@]}" | sort)
+  sorted_pkgs=$(printf '%s\n' "${!pkgs_seen[@]}" | LC_ALL=C sort)
 
   echo "--- Generating ${output} ---"
   {
