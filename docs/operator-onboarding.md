@@ -1,0 +1,415 @@
+# Onboarding an operator for s2i speculative deploy
+
+Step-by-step playbook to add a Zuul job that builds s2i OpenStack service
+images and deploys them through `OpenStackVersion` on an operator
+repository's `github-check` pipeline.
+
+Do not copy watcher-operator or test-operator blindly. Those two are
+special cases. Most operators follow the cinder-operator pattern.
+
+For how the content provider job works in this repository, see the
+[developer guide](developer-guide.md#zuul-content-provider).
+This document covers the **consumer** side: wiring a live deploy+test
+job in an operator repo.
+
+## Goal
+
+On an operator GitHub PR, Zuul must:
+
+1. Build operator images with `openstack-k8s-operators-content-provider`.
+2. Build that service's containers with `<service>-s2i-content-provider`
+   (child of `s2i-openstack-container-content-provider`).
+3. Deploy OpenStack with the s2i service images applied to
+   `OpenStackVersion` **during** `edpm_prepare` (before the control
+   plane comes up).
+4. Run the operator's existing tempest (or equivalent) against that
+   deployment via `<service>-s2i-tempest`.
+
+Keep the existing kuttl and tempest jobs unchanged. The s2i jobs are
+**new, non-voting** siblings, not replacements.
+
+Job names in the operator repo:
+
+| Job | Parents | Purpose |
+|-----|---------|---------|
+| `<service>-s2i-content-provider` | `s2i-openstack-container-content-provider` | Build this service's s2i images |
+| `<service>-s2i-tempest` | The operator's existing deploy+tempest job | Deploy those images and run tempest |
+
+Example: `cinder-s2i-content-provider`, `cinder-s2i-tempest`.
+
+```
+Operator PR (github-check)
+        |
+        +-- openstack-k8s-operators-content-provider
+        |     (operator catalog; owns content_provider_registry_ip)
+        |
+        +-- <service>-s2i-content-provider
+        |     (service images; s2i_content_provider_registry_ip:5001)
+        |
+        v
+<service>-s2i-tempest
+  parents the operator's existing deploy+tempest job
+  trusts both registries
+  applies cifmw_set_containers_images during edpm_prepare
+  runs the parent's tempest
+```
+
+## Classify the operator
+
+Answer these in order. Stop at the first match.
+
+| If | Then | Example |
+|----|------|---------|
+| The image is a test workload (Tempest, ansible-test), not a control-plane service | Pin `cifmw_test_operator_*` / KUTTL env vars to the s2i image. Do **not** use `OpenStackVersion`. | test-operator |
+| The service is **not** in the default control plane, or the operator owns a custom EDPM topology (extra computes, custom scenarios) | Parent the operator's own validation / EDPM job. | watcher-operator |
+| The operator already has a deploy+tempest job that enables this service | Parent **that** job. Add dual-registry trust and `cifmw_set_containers_images`. | cinder-operator (`cinder-operator-tempest`) |
+| None of the above | Parent the closest ci-framework EDPM/HCI job that already deploys the service. | glance, keystone, nova-api |
+
+Do **not** parent `s2i-speculative-deploy-test-base` (defined in this
+repo) on operator github-check. That base is for jobs where s2i is the
+**sole** content provider (this repo's own `s2i-openstack-deploy-validation`).
+It sets `content_provider_registry_ip` to the s2i registry, which
+steals the operator catalog. It also parents the test-operator EDPM
+job, which disables cinder (`service_available.cinder false`) and is a
+poor fit for most service tempest lists.
+
+## Phase 0: inventory
+
+Before writing Zuul YAML, collect these facts from the operator repo
+and from this repository.
+
+### Images s2i can build
+
+Under `containers/<service>/`. Example for cinder: `cinder-api`,
+`cinder-backup`, `cinder-scheduler`, `cinder-volume`. The content
+provider always builds `base` as a dependency when you list service
+images.
+
+### OpenStackVersion mappings
+
+Read [`containers/image-mappings.yaml`](../containers/image-mappings.yaml).
+
+- **Scalar fields** (for example `cinderAPIImage`) are returned in
+  `s2i_content_provider_os_custom_container_images` and can be passed
+  straight to `cifmw_set_containers_images`.
+- **Unmapped on purpose:**
+  - `base` — not a service image
+  - `tempest`, `ansible-test` — test images
+  - `cinder/cinder-volume`, `manila/manila-share` — backend **maps**,
+    not scalars
+  - nova-compute / nova-conductor / nova-scheduler / nova-novncproxy /
+    placement — s2i does not build them; they stay on operator defaults
+
+If a scalar service image is missing from the mapping, add it in this
+repo first. Do not invent OpenStackVersion field names; they must match
+`spec.customContainerImages` on
+`core.openstack.org/v1beta1 OpenStackVersion`.
+
+### Existing deploy job
+
+Find the operator's current GitHub-check deploy+test job (often
+`*-operator-tempest` or a `podified-multinode-*` child). Note:
+
+- Parent job name
+- Whether it already runs `edpm_prepare` (ci-framework EDPM jobs do)
+- Tempest include list
+- Storage / extra topology (HCI Ceph, NFS, extra computes)
+
+That job is the parent of `<service>-s2i-tempest`.
+
+### Backend map names (cinder / manila only)
+
+`cinderVolumeImages` and `manilaShareImages` are maps keyed by the
+**CinderVolume / ManilaShare resource name**, not the driver name.
+
+HCI Ceph in ci-framework uses CinderVolume `volume1` (the Ceph driver
+is configured inside that CR). openstack-operator looks up
+`CinderVolumeImages[<name>]` and otherwise falls back to `"default"`.
+The `"default"` key is **always reset** to the operator
+`RELATED_IMAGE`; setting `backends: [default]` does not change the
+running volume pod.
+
+Find the name from the parent job's kustomize (for HCI:
+`cinderVolumes/volume1`). Pass that name in `set_containers`
+`backends:`.
+
+## Phase 1: github-check (required)
+
+This is the only phase needed to prove the job. Do it first.
+
+### Dual registry
+
+github-check already runs `openstack-k8s-operators-content-provider`.
+CRC trusts that registry via `content_provider_registry_ip`. The s2i
+provider publishes to a **second** plain registry.
+
+Do **not** set:
+
+```yaml
+content_provider_registry_ip: "{{ s2i_content_provider_registry_ip }}"
+```
+
+That overwrites the operator catalog host. Append s2i instead:
+
+```yaml
+cifmw_crc_additional_insecure_registries:
+  - "{{ s2i_content_provider_registry_ip }}:5001"
+cifmw_crc_additional_allowed_registries:
+  - "{{ s2i_content_provider_registry_ip }}:5001"
+```
+
+### Image injection
+
+ci-framework `edpm_prepare` calls `cifmw.general.set_containers` when
+`cifmw_set_containers_images` is non-empty. That is early enough.
+A `pre_tests` `oc patch` is too late.
+
+```yaml
+cifmw_set_containers_preserve_unlisted: true
+cifmw_set_containers_images: >-
+  {{
+    s2i_content_provider_os_custom_container_images | dict2items |
+    json_query('[].{name: key, full_registry: value}')
+  }}
+```
+
+`preserve_unlisted: true` keeps images not in the s2i map from the
+current OpenStackVersion CR.
+
+### Backend maps
+
+Append a `cinderVolumeImages` / `manilaShareImages` entry. Zuul
+**rejects** job vars whose names start with `_`, so do not split this
+into `_helper` variables. Inline the list concat:
+
+```yaml
+cifmw_set_containers_images: >-
+  {{
+    (
+      s2i_content_provider_os_custom_container_images | dict2items |
+      json_query('[].{name: key, full_registry: value}')
+    ) + [{
+      'name': 'cinderVolumeImages',
+      'full_registry': (
+        s2i_content_provider_registry_ip ~ ':5001/' ~
+        s2i_ci_content.namespace ~
+        '/openstack-cinder-volume:' ~
+        s2i_ci_content.tag
+      ),
+      'backends': ['volume1']
+    }]
+  }}
+```
+
+Image name is `${IMAGE_PREFIX}-${directory}` (default
+`openstack-cinder-volume`). `s2i_ci_content.namespace` and
+`s2i_ci_content.tag` come from the s2i provider `zuul_return`.
+
+For manila, use `manilaShareImages`, `openstack-manila-share`, and the
+share CR name from the parent job.
+
+### Job skeleton
+
+Place both jobs in the operator's `zuul.d/jobs.yaml` (or `.zuul.yaml` if
+that is how the repo is laid out). Do not add the generic
+`s2i-openstack-container-content-provider` to the project pipeline;
+inherit it under the operator's own name.
+
+```yaml
+- job:
+    name: <service>-s2i-content-provider
+    parent: s2i-openstack-container-content-provider
+    description: |
+      Build s2i <service> images for <service>-s2i-tempest.
+    required-projects:
+      - name: openstack-k8s-operators/s2i-openstack-containers
+        override-checkout: main
+    vars:
+      s2i_ci_images:
+        - <service>/<image-a>
+        - <service>/<image-b>
+
+- job:
+    name: <service>-s2i-tempest
+    parent: <existing-operator-tempest-or-edpm-job>
+    description: |
+      Validate speculatively-built s2i <service> images against a live
+      OpenStack deployment. s2i-built images from the content provider
+      are applied to OpenStackVersion during edpm_prepare via
+      ci-framework set_containers before the control plane is deployed.
+    required-projects:
+      - name: openstack-k8s-operators/s2i-openstack-containers
+        override-checkout: main
+    vars:
+      cifmw_crc_additional_insecure_registries:
+        - "{{ s2i_content_provider_registry_ip }}:5001"
+      cifmw_crc_additional_allowed_registries:
+        - "{{ s2i_content_provider_registry_ip }}:5001"
+      cifmw_set_containers_preserve_unlisted: true
+      cifmw_set_containers_images: >-
+        {{
+          s2i_content_provider_os_custom_container_images | dict2items |
+          json_query('[].{name: key, full_registry: value}')
+        }}
+```
+
+Add the backend-map concat only when the service has volume/share
+images that tempest actually hits.
+
+Use an explicit `s2i_ci_images` list on github-check. `auto` is for
+OpenDev patches, where the triggering project is `openstack/<service>`.
+On an operator PR, auto-detect looks at operator sources and finds no
+`sources.txt` match.
+
+### Project pipeline
+
+In `zuul.d/projects.yaml` (or the project stanza in `.zuul.yaml`):
+
+```yaml
+- project:
+    name: openstack-k8s-operators/<service>-operator
+    github-check:
+      jobs:
+        - openstack-k8s-operators-content-provider:
+            vars:
+              cifmw_install_yamls_sdk_version: v1.41.1
+        # existing kuttl / tempest unchanged
+        - <service>-s2i-content-provider:
+            voting: false
+        - <service>-s2i-tempest:
+            voting: false
+            dependencies:
+              - openstack-k8s-operators-content-provider
+              - <service>-s2i-content-provider
+```
+
+### Watcher-only extras
+
+watcher-operator also:
+
+- Switched github-check from the **meta** content provider to
+  `openstack-k8s-operators-content-provider` (operator images only;
+  service images come from s2i).
+- Folded s2i jobs into the existing `opendev-watcher-edpm-pipeline`
+  template because RDO config already applies that template to
+  `openstack/watcher`, `python-watcherclient`, and
+  `watcher-tempest-plugin`.
+- Limited OpenDev s2i jobs with `files: [^watcher/]` so client and
+  tempest-plugin changes do not rebuild containers.
+
+Most operators already use the non-meta operator content provider and
+have **no** OpenDev EDPM template. Skip those extras unless the same
+facts are true for the operator you are onboarding.
+
+## Phase 2: OpenDev Gerrit (optional)
+
+Do this only after github-check has applied s2i images and tempest has
+run.
+
+Two wiring options:
+
+1. **Existing `opendev-<service>-edpm-pipeline` in the operator repo,
+   already applied by the config repo** (watcher): add the s2i provider
+   and consumer to that template in place. Use `s2i_ci_images: auto`,
+   `files:` on the service source tree, and `override-checkout: main`.
+2. **No such template** (cinder and most others): add a project stanza
+   in
+   [`openstack-k8s-operators/config`](https://github.com/openstack-k8s-operators/config)
+   `zuul.d/s2i-openstack-speculative-builds.yaml` using the
+   `s2i-speculative-build` template, plus the consumer job with
+   dependencies on both content providers.
+
+Do not invent a new `opendev-<service>-edpm-pipeline` inside the
+operator just to copy watcher. That template exists because RDO already
+pointed Gerrit watcher projects at it.
+
+End-to-end OpenDev proof needs a DNM patch on
+`opendev.org/openstack/<service>` with `Depends-On:` pointing at the
+operator PR.
+
+Projects that only need build validation (no deployment) can use the
+template alone:
+
+```yaml
+- project:
+    name: opendev.org/openstack/<service>
+    templates:
+      - s2i-speculative-build
+```
+
+The `s2i-speculative-build` template still schedules the generic
+`s2i-openstack-container-content-provider` with `s2i_ci_images: auto`.
+Depend on that job, not `<service>-s2i-content-provider` (that child
+exists only on the operator github-check pipeline).
+
+A deploy+test OpenDev stanza looks like:
+
+```yaml
+- project:
+    name: opendev.org/openstack/<service>
+    templates:
+      - s2i-speculative-build
+    check:
+      jobs:
+        - openstack-k8s-operators-content-provider:
+            vars:
+              cifmw_install_yamls_sdk_version: v1.41.1
+        - <service>-s2i-tempest:
+            voting: false
+            dependencies:
+              - openstack-k8s-operators-content-provider
+              - s2i-openstack-container-content-provider
+```
+
+## Prove it worked
+
+From the consumer job logs / must-gather, `OpenStackVersion`
+`spec.customContainerImages` must show s2i registry URLs, for example:
+
+```yaml
+cinderAPIImage: <s2i-ip>:5001/openstack/openstack-cinder-api:<tag>
+cinderBackupImage: <s2i-ip>:5001/openstack/openstack-cinder-backup:<tag>
+cinderSchedulerImage: <s2i-ip>:5001/openstack/openstack-cinder-scheduler:<tag>
+cinderVolumeImages:
+  volume1: <s2i-ip>:5001/openstack/openstack-cinder-volume:<tag>
+```
+
+Pods for those services must pull from the s2i registry, not only
+quay.io operator defaults. Tempest failures after a correct
+OpenStackVersion are a test-filter problem, not an injection problem.
+
+## Checklist
+
+- [ ] Classified the operator (test image vs custom EDPM vs typical)
+- [ ] Confirmed s2i image targets and `image-mappings.yaml` scalars
+- [ ] Identified parent deploy job and tempest scope
+- [ ] For cinder/manila: identified backend map key (HCI: `volume1`)
+- [ ] Jobs named `<service>-s2i-content-provider` and
+      `<service>-s2i-tempest`
+- [ ] Content provider child parents
+      `s2i-openstack-container-content-provider` (do not add the
+      generic job to the operator pipeline)
+- [ ] Consumer job parents the operator deploy job, not
+      `s2i-speculative-deploy-test-base`
+- [ ] Dual registry: additional insecure **and** allowed; operator CP
+      keeps `content_provider_registry_ip`
+- [ ] `cifmw_set_containers_preserve_unlisted: true`
+- [ ] No Zuul vars starting with `_`
+- [ ] Existing kuttl/tempest jobs unchanged
+- [ ] New jobs `voting: false`
+- [ ] Explicit `s2i_ci_images` list on github-check
+- [ ] OpenStackVersion in a live run shows s2i URLs (including backend
+      maps if applicable)
+
+## Common failures
+
+| Symptom | Likely cause |
+|---------|--------------|
+| Zuul: `Invalid Ansible variable name '_...'` | Job `vars` must not start with `_` |
+| Operator catalog / CRC cannot pull operator images | `content_provider_registry_ip` was pointed at s2i |
+| CRC cannot pull s2i service images | Missing `cifmw_crc_additional_*` registries |
+| API/scheduler s2i, volume pod still quay | Missing `cinderVolumeImages.<CinderVolume name>` |
+| Volume map set on `default` but pod unchanged | Operator always overwrites the `default` key |
+| `s2i_ci_images: auto` on an operator PR builds nothing useful | Auto-detect matches OpenDev `sources.txt` projects, not operator git |
+| Images appear only after tempest starts | Injection used `pre_tests` instead of `edpm_prepare` / `set_containers` |
+| Tempest skips the service | Parent job disables it (test-operator EDPM sets `service_available.cinder false`) |
