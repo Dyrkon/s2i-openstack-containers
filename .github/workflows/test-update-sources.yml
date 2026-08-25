@@ -6,19 +6,19 @@ on:
       - .github/actions/setup-tox/action.yml
       - .github/workflows/test-update-sources.yml
       - build.sh
-      - containers/**
+      - containers/**/*deps.txt
+      - containers/**/excluded-requirements.txt
+      - containers/**/sources.txt
       - tox.ini
-      - '!**/OWNERS'
-      - '!**/OWNERS_ALIASES'
   push:
     paths:
       - .github/actions/setup-tox/action.yml
       - .github/workflows/test-update-sources.yml
       - build.sh
-      - containers/**
+      - containers/**/*deps.txt
+      - containers/**/excluded-requirements.txt
+      - containers/**/sources.txt
       - tox.ini
-      - '!**/OWNERS'
-      - '!**/OWNERS_ALIASES'
   workflow_dispatch:
 
 jobs:
