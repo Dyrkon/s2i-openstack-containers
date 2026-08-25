@@ -13,11 +13,11 @@ COPY aodh-api/src/ /src/
 ARG PIP_NO_BINARY=""
 ENV PIP_NO_BINARY=${PIP_NO_BINARY}
 
-COPY aodh-api/builddeps.txt /tmp/builddeps.txt
+COPY builddeps.txt /tmp/builddeps.txt
 RUN pkgs=$(cat /tmp/builddeps.txt | grep -v '^#' | grep -v '^$' | tr '\n' ' ') && \
     if [ -n "${pkgs}" ]; then microdnf -y install ${pkgs} && microdnf clean all; fi
 
-COPY aodh-api/pythonbuilddeps.txt /tmp/pythonbuilddeps.txt
+COPY pythonbuilddeps.txt /tmp/pythonbuilddeps.txt
 RUN pkgs=$(cat /tmp/pythonbuilddeps.txt | grep -v '^#' | grep -v '^$' | tr '\n' ' ') && \
     if [ -n "${pkgs}" ]; then pip3 install --no-cache-dir -c /deps-upper-constraints.txt ${pkgs}; fi && \
     rm /tmp/pythonbuilddeps.txt
@@ -57,19 +57,19 @@ RUN mkdir -p /configfiles/etc/aodh && \
 # --- Runtime stage: install from wheels ---
 FROM ${BASE_IMAGE}
 
-LABEL summary="OpenStack Aodh API" \
-      io.k8s.description="Aodh API container built from source with kolla interface"
+LABEL summary="OpenStack Aodh" \
+      io.k8s.description="Aodh container built from source with kolla interface"
 
 RUN uid_gid_manage aodh
 
-COPY aodh-api/bindeps.txt /tmp/bindeps.txt
+COPY bindeps.txt /tmp/bindeps.txt
 RUN pkgs=$(cat /tmp/bindeps.txt | grep -v '^#' | grep -v '^$' | tr '\n' ' ') && \
     if [ -n "${pkgs}" ]; then microdnf -y install ${pkgs} && microdnf clean all; fi && rm /tmp/bindeps.txt
 
 COPY --from=build /wheels /wheels
 COPY --from=build /tmp/build-constraints.txt /deps-upper-constraints.txt
 COPY --from=build /source-built-packages.txt /source-built-packages.txt
-COPY aodh-api/pythondeps.txt /tmp/pythondeps.txt
+COPY pythondeps.txt /tmp/pythondeps.txt
 RUN extrapkgs=$(cat /tmp/pythondeps.txt | grep -v '^#' | grep -v '^$' | tr '\n' ' ') && \
     pip3 install --no-cache-dir --prefix=/usr \
       -c /deps-upper-constraints.txt \
