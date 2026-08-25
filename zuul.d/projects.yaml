@@ -16,3 +16,7 @@
             voting: false
             dependencies:
               - s2i-openstack-container-content-provider
+        - s2i-openstack-container-consumer-smoke:
+            irrelevant-files: *irrelevant-for-zuul
+            dependencies:
+              - s2i-openstack-container-content-provider
