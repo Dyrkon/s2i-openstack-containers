@@ -14,9 +14,6 @@ arches:
   - aarch64
 
 packages:
-  # NOTE: liberasurecode / liberasurecode-devel are intentionally absent:
-  # liberasurecode is built from source (see sources.txt) using the autotools
-  # toolchain below (autoconf/automake/libtool/make).
   - attr
   - autoconf
   - automake
