@@ -4,4 +4,3 @@ rsyslog-elasticsearch
 rsyslog-gnutls
 rsyslog-mmjsonparse
 rsyslog-mmnormalize
-
