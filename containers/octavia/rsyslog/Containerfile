@@ -1,0 +1,15 @@
+# OpenStack Rsyslog server
+#
+# This image runs a plain rsyslog server to act as a syslog receiver
+# for Octavia amphora log offloading.
+
+ARG BASE_IMAGE=localhost/openstack/openstack-base:latest
+
+FROM ${BASE_IMAGE}
+
+LABEL summary="OpenStack Octavia Log Offloading Server (rsyslog)" \
+      io.k8s.description="Rsyslog receiver for amphora log offloading"
+
+COPY rsyslog/bindeps.txt /tmp/bindeps.txt
+RUN pkgs=$(cat /tmp/bindeps.txt | grep -v '^#' | grep -v '^$' | tr '\n' ' ') && \
+    if [ -n "${pkgs}" ]; then microdnf -y install ${pkgs} && microdnf clean all; fi && rm /tmp/bindeps.txt
