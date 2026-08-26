@@ -88,6 +88,9 @@
 
       Used in the s2i repo's github-check pipeline to gate PRs
       (especially update-sources bumps) on real deployment validation.
+      Depends on the content provider (paused registry and artifacts)
+      and on ``s2i-openstack-container-consumer-smoke`` so a broken
+      publish/mapping contract skips this CRC/EDPM job.
     required-projects:
       - name: openstack-k8s-operators/s2i-openstack-containers
     vars:
@@ -107,7 +110,11 @@
       fresh consumer node. Verifies registry access, image structure,
       and deployment key mappings.
 
-      Depends on ``s2i-openstack-container-content-provider``.
+      Depends on ``s2i-openstack-container-content-provider``. In this
+      repository's github-check pipeline,
+      ``s2i-openstack-deploy-validation`` also depends on this job so
+      the expensive CRC/EDPM run starts only after the contract check
+      passes.
     nodeset:
       nodes:
         - name: consumer
