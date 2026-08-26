@@ -37,4 +37,9 @@ packages:
   - python3-setuptools
   - python3-unbound
   - python3-wheel
+  - rsyslog
+  - rsyslog-elasticsearch
+  - rsyslog-gnutls
+  - rsyslog-mmjsonparse
+  - rsyslog-mmnormalize
   - rust

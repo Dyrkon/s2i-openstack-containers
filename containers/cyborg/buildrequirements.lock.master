@@ -1,12 +1,12 @@
 calver==2025.10.20
 coherent-licensed==0.5.2
-cython==3.2.9
+cython==3.3.0
 flit-core==3.12.0
 flit-core==4.0.2
 hatch-fancy-pypi-readme==25.1.0
 hatch-vcs==0.5.0
 hatchling==1.32.0
-maturin==1.14.1
+maturin==1.15.0
 packaging==26.2
 pathspec==1.1.1
 pbr==7.0.3
