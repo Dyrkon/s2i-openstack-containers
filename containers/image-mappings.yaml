@@ -55,6 +55,11 @@ openstack_version:
       - heatEngineImage
     horizon/horizon:
       - horizonImage
+    ironic/ironic-api:
+      - ironicAPIImage
+    ironic/ironic-conductor:
+      - ironicConductorImage
+      - ironicPxeImage
     keystone/keystone:
       - keystoneAPIImage
     manila/manila-api:
