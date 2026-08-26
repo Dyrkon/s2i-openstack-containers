@@ -14,6 +14,11 @@ RUN pkgs=$(cat /tmp/bindeps.txt | grep -v '^#' | grep -v '^$' | tr '\n' ' ') && 
     if [ -n "${pkgs}" ]; then microdnf -y install ${pkgs} && microdnf clean all && rm -rf /var/cache/dnf; fi && \
     rm /tmp/bindeps.txt
 
+COPY ansible-test/builddeps.txt /tmp/builddeps.txt
+RUN pkgs=$(cat /tmp/builddeps.txt | grep -v '^#' | grep -v '^$' | tr '\n' ' ') && \
+    if [ -n "${pkgs}" ]; then microdnf -y install ${pkgs} && microdnf clean all; fi && \
+    rm /tmp/builddeps.txt
+
 COPY ansible-test/pythondeps.txt /tmp/pythondeps.txt
 RUN extrapkgs=$(cat /tmp/pythondeps.txt | grep -v '^#' | grep -v '^$' | tr '\n' ' ') && \
     pip3 install --no-cache-dir --prefix=/usr -c /deps-upper-constraints.txt ${extrapkgs} && \
