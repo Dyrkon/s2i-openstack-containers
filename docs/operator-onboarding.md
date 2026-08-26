@@ -10,7 +10,10 @@ special cases. Most operators follow the cinder-operator pattern.
 For how the content provider job works in this repository, see the
 [developer guide](developer-guide.md#zuul-content-provider).
 This document covers the **consumer** side: wiring a live deploy+test
-job in an operator repo.
+job in an operator repo. Do not copy this repository's own
+github-check graph (`content-provider` → `consumer-smoke` →
+`deploy-validation`); that wiring is documented under
+[This repository's github-check pipeline](developer-guide.md#this-repositorys-github-check-pipeline).
 
 ## Goal
 
@@ -72,6 +75,17 @@ It sets `content_provider_registry_ip` to the s2i registry, which
 steals the operator catalog. It also parents the test-operator EDPM
 job, which disables cinder (`service_available.cinder false`) and is a
 poor fit for most service tempest lists.
+
+Do **not** copy this repository's own `github-check` job graph onto an
+operator pipeline either. Here the image jobs are
+`s2i-openstack-container-content-provider` →
+`s2i-openstack-container-consumer-smoke` →
+`s2i-openstack-deploy-validation`. That last job depends on **both** the
+content provider (paused registry and artifacts) and consumer-smoke (skip
+CRC/EDPM when pull/inspect/mapping fails). Operator pipelines still use
+`<service>-s2i-tempest` with dual-registry trust as shown below. Smoke is
+optional on the operator side; see
+[Optional fail-fast](#optional-fail-fast-consumer-smoke).
 
 ## Phase 0: inventory
 
@@ -283,6 +297,39 @@ In `zuul.d/projects.yaml` (or the project stanza in `.zuul.yaml`):
               - <service>-s2i-content-provider
 ```
 
+Keep both content providers as **direct** tempest dependencies. That is
+what keeps each paused registry up until CRC finishes. Do not replace
+those lines with a dependency on smoke alone.
+
+### Optional fail-fast (consumer smoke)
+
+This repository gates `s2i-openstack-deploy-validation` on
+`s2i-openstack-container-consumer-smoke`. Operators can do the same
+before `<service>-s2i-tempest`: smoke pulls and inspects the published
+images on a cheap CentOS node so a broken registry or mapping does not
+start CRC.
+
+Depend on `<service>-s2i-content-provider` (the job name in **this**
+pipeline), not `s2i-openstack-container-content-provider`. That parent
+job is not scheduled on the operator pipeline. Keep both content
+providers as direct tempest dependencies so each paused registry stays
+up.
+
+```yaml
+        - s2i-openstack-container-consumer-smoke:
+            voting: false
+            dependencies:
+              - <service>-s2i-content-provider
+        - <service>-s2i-tempest:
+            voting: false
+            dependencies:
+              - openstack-k8s-operators-content-provider
+              - <service>-s2i-content-provider
+              - s2i-openstack-container-consumer-smoke
+```
+
+This is optional. Phase 1 is complete without it.
+
 ### Watcher-only extras
 
 watcher-operator also:
@@ -391,6 +438,11 @@ OpenStackVersion are a test-filter problem, not an injection problem.
       generic job to the operator pipeline)
 - [ ] Consumer job parents the operator deploy job, not
       `s2i-speculative-deploy-test-base`
+- [ ] Do not copy this repo's `s2i-openstack-deploy-validation`
+      dependency list; keep both content providers as direct tempest
+      dependencies. Optional: add `s2i-openstack-container-consumer-smoke`
+      as an extra tempest dependency (depend on
+      `<service>-s2i-content-provider`, not the generic parent job)
 - [ ] Dual registry: additional insecure **and** allowed; operator CP
       keeps `content_provider_registry_ip`
 - [ ] `cifmw_set_containers_preserve_unlisted: true`
@@ -413,3 +465,6 @@ OpenStackVersion are a test-filter problem, not an injection problem.
 | `s2i_ci_images: auto` on an operator PR builds nothing useful | Auto-detect matches OpenDev `sources.txt` projects, not operator git |
 | Images appear only after tempest starts | Injection used `pre_tests` instead of `edpm_prepare` / `set_containers` |
 | Tempest skips the service | Parent job disables it (test-operator EDPM sets `service_available.cinder false`) |
+| CRC/EDPM skipped after a short consumer-smoke failure | Expected if smoke is a tempest dependency: pull, inspect, or deployment-key resolution failed. Fix the s2i provider return, then tempest will run. |
+| Smoke job: `Job s2i-openstack-container-content-provider not defined` | Smoke depends on a job name that is not in this pipeline. On an operator repo depend on `<service>-s2i-content-provider`. |
+| Registry gone while tempest is still pulling | Tempest lost its **direct** dependency on the s2i content provider (depended only on smoke). Keep the provider listed on tempest. |

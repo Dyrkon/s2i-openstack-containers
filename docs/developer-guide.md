@@ -392,6 +392,41 @@ with that service's image targets. The matching deploy job is
 projects in the shared buildset workspace. Speculative source staging
 is described in [Speculative builds](#speculative-builds-zuul-integration).
 
+### This repository's github-check pipeline
+
+This repo's own check pipeline is not the operator graph. Molecule runs
+on its own. The image jobs are:
+
+```
+s2i-openstack-container-content-provider
+        (pauses; buildset registry stays up)
+        |
+        +-- s2i-openstack-container-consumer-smoke
+        |     fresh CentOS node: pull, inspect, resolve deployment keys
+        |
+        v
+s2i-openstack-deploy-validation  (non-voting CRC/EDPM + tempest)
+  depends on the content provider AND consumer-smoke
+```
+
+`s2i-openstack-deploy-validation` lists **both** dependencies on
+purpose:
+
+- The content provider, so `zuul_return` artifacts stay in scope and
+  the paused registry is not torn down in `post.yaml` while CRC still
+  needs it.
+- Consumer-smoke, so a malformed return, an unreachable registry, an
+  unpullable image, or a deployment key that does not resolve skips the
+  CRC/EDPM nodeset. Smoke is a few minutes; deploy-validation is not.
+
+Do not drop the content-provider line and depend only on smoke. Do not
+set smoke as the `parent:` of `s2i-openstack-deploy-validation`; they
+are different job families. Use Zuul `dependencies`.
+
+Operator `github-check` pipelines follow
+[`operator-onboarding.md`](operator-onboarding.md) instead of copying
+this graph.
+
 ### Image deployment metadata
 
 The repository-level `containers/image-mappings.yaml` associates exact build
@@ -461,11 +496,13 @@ valid.
 Per-image parallel logs and registry/result manifests are retained under
 `zuul-output/logs/container-build/`.
 
-The provider pauses while dependent jobs run. Private onboarding may attach a
-trivial child that prints the returned registry paths and maps. That debug job
-does not pull images, patch an OpenStackVersion resource, deploy OpenStack, or
-invoke a downstream repository's playbooks. Downstream consumption is separate
-work.
+The provider pauses while dependent jobs run. In this repository,
+`s2i-openstack-container-consumer-smoke` is the cheap contract check
+(pull, inspect, deployment-key resolution on a fresh node) and
+`s2i-openstack-deploy-validation` is the live CRC/EDPM consumer. Both
+must remain **direct** dependents of the provider so the registry stays
+paused until they finish. Operator consumption is documented in
+[`operator-onboarding.md`](operator-onboarding.md).
 
 ## Build architecture
 
