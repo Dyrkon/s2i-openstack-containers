@@ -1,0 +1,59 @@
+# Network utilities
+#
+# This image provides network related python libraries (netifaces, pyroute2)
+# used for simple network configuration operations at runtime.
+
+ARG BASE_IMAGE=localhost/openstack/openstack-base:latest
+
+# --- Build stage: compile wheels and collect upstream config ---
+FROM ${BASE_IMAGE} AS build
+
+# Copy constraints file and all source repos into the build stage
+ARG CONSTRAINTS_FILE=requirements.lock
+COPY ${CONSTRAINTS_FILE} /deps-upper-constraints.txt
+COPY src/ /src/
+
+# We can force build from source of all packages optionally
+ARG PIP_NO_BINARY=""
+ENV PIP_NO_BINARY=${PIP_NO_BINARY}
+# required to build rpds-py from source
+ENV MATURIN_NO_INSTALL_RUST=true
+
+COPY builddeps.txt /tmp/builddeps.txt
+RUN pkgs=$(cat /tmp/builddeps.txt | grep -v '^#' | grep -v '^$' | tr '\n' ' ') && \
+    if [ -n "${pkgs}" ]; then microdnf -y install ${pkgs} && microdnf clean all; fi
+
+COPY pythonbuilddeps.txt /tmp/pythonbuilddeps.txt
+RUN pkgs=$(cat /tmp/pythonbuilddeps.txt | grep -v '^#' | grep -v '^$' | tr '\n' ' ') && \
+    if [ -n "${pkgs}" ]; then pip3 install --no-cache-dir -c /deps-upper-constraints.txt ${pkgs}; fi && \
+    rm /tmp/pythonbuilddeps.txt
+
+# Build the libraries we are looking for and place them in a different directory
+# The netifaces needs gcc to build so we need to do it in the build stage of the
+# container file. We'll copy the wheel contents out in the second stage and be done
+COPY netutils/pythondeps.txt /tmp/pythondeps.txt
+RUN pkgs=$(cat /tmp/pythondeps.txt | grep -v '^#' | grep -v '^$' | tr '\n' ' ') && \
+    if [ -n "${pkgs}" ]; then pip3 wheel --no-cache-dir --wheel-dir=/wheels/pkgs -c /deps-upper-constraints.txt ${pkgs}; fi && \
+    rm /tmp/pythondeps.txt
+
+# Second, build the wheels for the dependencies and place them in a different directory
+RUN pip3 wheel --no-cache-dir --no-deps \
+      --wheel-dir=/wheels/deps -r /deps-upper-constraints.txt
+
+# --- Runtime stage: install from wheels ---
+FROM ${BASE_IMAGE}
+
+LABEL summary="Python Network Libary Image" \
+      io.k8s.description="Python network library image for python utilities"
+
+COPY bindeps.txt /tmp/bindeps.txt
+RUN pkgs=$(cat /tmp/bindeps.txt | grep -v '^#' | grep -v '^$' | tr '\n' ' ') && \
+    if [ -n "${pkgs}" ]; then microdnf -y install ${pkgs} && microdnf clean all; fi && \
+    rm -f /tmp/bindeps.txt
+
+# Install source-built wheels + their deps from PyPI + extra Python deps
+COPY --from=build /wheels /wheels
+RUN pip3 install --no-cache-dir --prefix=/usr \
+      -c /deps-upper-constraints.txt \
+      --find-links=/wheels/deps \
+      /wheels/pkgs/*whl
