@@ -21,6 +21,12 @@ packages:
   - httpd
   - libffi
   - libffi-devel
+  - libpq
+  - libpq-devel
+  - libxml2
+  - libxml2-devel
+  - libxslt
+  - libxslt-devel
   - mod_ssl
   - openssl-devel
   - python3
