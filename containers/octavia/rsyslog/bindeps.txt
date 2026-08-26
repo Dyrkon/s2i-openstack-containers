@@ -1,0 +1,7 @@
+# Rsyslog is used for Octavia log offloading feature
+rsyslog
+rsyslog-elasticsearch
+rsyslog-gnutls
+rsyslog-mmjsonparse
+rsyslog-mmnormalize
+

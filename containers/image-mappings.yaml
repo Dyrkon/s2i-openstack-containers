@@ -85,6 +85,8 @@ openstack_version:
       - octaviaWorkerImage
       - octaviaHousekeepingImage
       - octaviaHealthmanagerImage
+    octavia/rsyslog:
+      - octaviaRsyslogImage
     openstackclient/openstackclient:
       - openstackClientImage
     ovn/ovn-base:
