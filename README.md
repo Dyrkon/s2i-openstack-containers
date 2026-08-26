@@ -50,6 +50,8 @@ tox -e linters
   container images and Containerfiles.
 - [`docs/developer-guide.md`](docs/developer-guide.md) describes repository
   structure, sources, generated files, builds, and maintenance workflows.
+- [`docs/operator-onboarding.md`](docs/operator-onboarding.md) is the playbook
+  for wiring a speculative deploy+test job on an operator repository.
 - [`docs/TESTING.md`](docs/TESTING.md) provides a concise testing entry point.
 
 ## Publication

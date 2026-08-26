@@ -4,7 +4,9 @@ This guide documents the repository's current build, source-maintenance, and
 contributor workflows. For a concise project introduction, see the root
 [`README.md`](../README.md). For a short testing entry point, see
 [`TESTING.md`](TESTING.md). For dropping unwanted upstream dependencies, see
-[`excluding-requirements.md`](excluding-requirements.md).
+[`excluding-requirements.md`](excluding-requirements.md). To wire a live
+deploy+tempest job on an operator repository, see
+[`operator-onboarding.md`](operator-onboarding.md).
 
 Source-to-image container builds for OpenStack services on UBI 10 (ubi-minimal).
 
@@ -381,13 +383,14 @@ to an explicit list of image targets; the provider resolves the selection
 through `build.sh` and publishes only that set. The caller is responsible
 for including `base` in the list if service images depend on it.
 
-To compose the provider in an operator repository, inherit the job, add the
-container repository and any related repositories to `required-projects`, set
-`s2i_ci_container_project`, and override `s2i_ci_images` with the required
-subset. Zuul places those projects in the shared buildset workspace, but this
-provider does not yet consume speculative service checkouts or build operators.
-Those integrations remain follow-up scope; the current provider always uses
-maintained source pins.
+To compose the provider in an operator repository, define
+`<service>-s2i-content-provider` that parents this job, add the
+container repository to `required-projects`, and override `s2i_ci_images`
+with that service's image targets. The matching deploy job is
+`<service>-s2i-tempest` (see
+[`operator-onboarding.md`](operator-onboarding.md)). Zuul places those
+projects in the shared buildset workspace. Speculative source staging
+is described in [Speculative builds](#speculative-builds-zuul-integration).
 
 ### Image deployment metadata
 
@@ -565,6 +568,9 @@ for a commit shares the same `master-<sha>` tag and consistent OS packages.
    STREAM=master ./build.sh build <project>
    ```
 
+8. To validate the images on a live operator deployment, follow
+   [`operator-onboarding.md`](operator-onboarding.md).
+
 ## Speculative builds (Zuul integration)
 
 When a patch is submitted against an upstream OpenStack project (e.g.,
@@ -640,121 +646,11 @@ which upstream repos feed into a given image.
 
 ### Adding speculative deploy+test validation for a service
 
-Once the content provider can build images for a service, you can wire an
-end-to-end validation job that deploys OpenStack with the speculatively-built
-images and runs tempest tests.
+Once the content provider can build images for a service, wire a live
+deploy+tempest job on the operator repository. Follow
+[`operator-onboarding.md`](operator-onboarding.md).
 
-CI-Framework applies s2i-built images during `edpm_prepare` when jobs pass
-`s2i_content_provider_os_custom_container_images` as
-`cifmw_set_containers_images`. A small `set_containers` task applies those
-overrides before the control plane is deployed. Set
-`cifmw_set_containers_preserve_unlisted: true` when the list is partial so
-unspecified images are kept from the existing OpenStackVersion CR.
-
-Until the ci-framework change lands on `main`, consumer job MRs must add
-`Depends-On: <ci-framework-PR-URL>` so Zuul checks out the branch that
-wires `set_containers` into `edpm_prepare`.
-
-**Step 1: Verify image mappings exist.**
-
-Check `containers/image-mappings.yaml` for the service's images. Each
-image target must map to one or more `OpenStackVersion` deployment keys.
-If the service is missing, add entries:
-
-```yaml
-openstack_version:
-  custom_container_images:
-    <project>/<image>:
-      - <deploymentKeyImage>
-```
-
-**Step 2: Create the consumer job in the operator repo.**
-
-Two patterns are available depending on the service's deployment needs:
-
-*Services enabled in the standard deployment* (e.g., glance, nova) can
-parent `s2i-speculative-deploy-test-base`, which inherits
-`podified-multinode-edpm-deployment-crc-test-operator`, trusts the s2i
-buildset registry, and passes s2i image overrides to
-`cifmw_set_containers_images`:
-
-```yaml
-- job:
-    name: s2i-speculative-deploy-test-<service>
-    parent: s2i-speculative-deploy-test-base
-    vars:
-      s2i_tempest_include_list: "^tempest.api.<service-scope>"
-      cifmw_test_operator_tempest_tempestconf_config:
-        overrides: |
-          service_available.<service> true
-```
-
-*Services with custom deployments* (e.g., watcher, which needs 2+
-computes and operator-specific scenarios) should parent their own operator
-base job and pass the same container override variables used by
-`s2i-speculative-deploy-test-base`:
-
-```yaml
-- job:
-    name: s2i-speculative-deploy-test-<service>
-    parent: <service>-operator-base
-    required-projects:
-      - name: openstack-k8s-operators/s2i-openstack-containers
-        override-checkout: main
-    vars:
-      content_provider_registry_ip: "{{ s2i_content_provider_registry_ip }}"
-      cifmw_set_containers_preserve_unlisted: true
-      cifmw_set_containers_images: >-
-        {{
-          s2i_content_provider_os_custom_container_images | dict2items |
-          json_query('[].{name: key, full_registry: value}')
-        }}
-```
-
-**Step 3: Register the consumer in the operator's project pipeline.**
-
-Add the job to the operator's `github-check` pipeline with dependencies
-on both content providers:
-
-```yaml
-- s2i-speculative-deploy-test-<service>:
-    voting: false
-    dependencies:
-      - openstack-k8s-operators-content-provider
-      - s2i-openstack-container-content-provider
-```
-
-**Step 4: Add the upstream project stanza (optional).**
-
-To also trigger validation from upstream source changes (e.g., a patch to
-`opendev.org/openstack/<service>`), add a project stanza to the
-`config` repository's `zuul.d/s2i-openstack-speculative-builds.yaml`.
-Use the `s2i-speculative-build` template for the content provider and
-add the consumer job:
-
-```yaml
-- project:
-    name: opendev.org/openstack/<service>
-    templates:
-      - s2i-speculative-build
-    check:
-      jobs:
-        - openstack-k8s-operators-content-provider:
-            vars:
-              cifmw_install_yamls_sdk_version: v1.41.1
-        - s2i-speculative-deploy-test-<service>:
-            voting: false
-            dependencies:
-              - openstack-k8s-operators-content-provider
-              - s2i-openstack-container-content-provider
-```
-
-Projects that only need build validation (no deployment) can use the
-template alone:
-
-```yaml
-- project:
-    name: opendev.org/openstack/<service>
-    templates:
-      - s2i-speculative-build
-```
+That playbook covers job naming (`<service>-s2i-content-provider`,
+`<service>-s2i-tempest`), dual-registry trust, `edpm_prepare` injection,
+and the OpenDev `s2i-speculative-build` template. Do not parent
+`s2i-speculative-deploy-test-base` on operator `github-check`.
