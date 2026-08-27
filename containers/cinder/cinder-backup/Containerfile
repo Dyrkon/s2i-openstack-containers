@@ -10,6 +10,23 @@ COPY ${CONSTRAINTS_FILE} /deps-upper-constraints.txt
 COPY src/ /src/
 COPY cinder-backup/src/ /src/
 
+# Drop excluded upstream requirements before building the service wheel, so the
+# wheel's own metadata (Requires-Dist) cannot pull them back in at install time.
+# Mirrors the RDO cinder distgit spec, which strips the same packages from
+# requirements.txt in %prep. See docs/excluding-requirements.md.
+COPY excluded-requirements.txt /tmp/excluded-requirements.txt
+# Pre-strip comments, inline whitespace, and blank lines inline so the loop sees
+# one bare package name per line -- identical to the host-side strip in build.sh.
+RUN sed -e 's/#.*//' -e 's/[[:space:]]//g' -e '/^$/d' /tmp/excluded-requirements.txt | \
+    while IFS= read -r pkg; do \
+      for req in /src/*/requirements.txt /src/overrides/*/requirements.txt; do \
+        if [ -f "${req}" ]; then \
+          sed -i -E "/^${pkg}([[:space:]<>=!~;,#[]|\$)/Id" "${req}"; \
+        fi; \
+      done; \
+    done && \
+    rm /tmp/excluded-requirements.txt
+
 # We can force build from source of all packages optionally
 ARG PIP_NO_BINARY=""
 ENV PIP_NO_BINARY=${PIP_NO_BINARY}
