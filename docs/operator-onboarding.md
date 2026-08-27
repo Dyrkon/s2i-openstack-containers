@@ -113,6 +113,17 @@ Read [`containers/image-mappings.yaml`](../containers/image-mappings.yaml).
     not scalars
   - nova-compute / nova-conductor / nova-scheduler / nova-novncproxy /
     placement — s2i does not build them; they stay on operator defaults
+- **Mapped but omitted by this repo's deploy-validation job:**
+  `neutronAPIImage`, `edpmNeutronMetadataAgentImage`,
+  `mariadbImage`, and `glanceAPIImage`.
+  `s2i-openstack-deploy-validation` filters them with
+  `s2i_ci_skip_os_custom_images` until those images can be consumed
+  by the control plane, so `preserve_unlisted` keeps payload
+  defaults. The content provider still returns every mapped key.
+  Operator consumer jobs must inject them: leave the skip list unset
+  or empty. Do not replace the mappings with `quay.io` `master-latest`
+  pins. When operators are ready, remove the keys from the skip list
+  rather than deleting the mappings.
 
 If a scalar service image is missing from the mapping, add it in this
 repo first. Do not invent OpenStackVersion field names; they must match
@@ -189,6 +200,14 @@ cifmw_set_containers_images: >-
 
 `preserve_unlisted: true` keeps images not in the s2i map from the
 current OpenStackVersion CR.
+
+`s2i-speculative-deploy-test-base` (this repository only) optionally
+filters that map through `s2i_ci_skip_os_custom_images`, which is empty
+by default. Only `s2i-openstack-deploy-validation` sets a skip list
+today (`neutronAPIImage`, `edpmNeutronMetadataAgentImage`,
+`mariadbImage`, `glanceAPIImage`). Do **not** copy that skip list into
+`<service>-s2i-tempest`. Operator jobs should pass the full
+`s2i_content_provider_os_custom_container_images` map as shown above.
 
 ### Backend maps
 
@@ -269,6 +288,9 @@ inherit it under the operator's own name.
 
 Add the backend-map concat only when the service has volume/share
 images that tempest actually hits.
+
+Do not copy `s2i_ci_skip_os_custom_images` from
+`s2i-openstack-deploy-validation` into operator consumer jobs.
 
 Use an explicit `s2i_ci_images` list on github-check. `auto` is for
 OpenDev patches, where the triggering project is `openstack/<service>`.
@@ -443,6 +465,8 @@ OpenStackVersion are a test-filter problem, not an injection problem.
       dependencies. Optional: add `s2i-openstack-container-consumer-smoke`
       as an extra tempest dependency (depend on
       `<service>-s2i-content-provider`, not the generic parent job)
+- [ ] Do not copy `s2i_ci_skip_os_custom_images` from
+      `s2i-openstack-deploy-validation`
 - [ ] Dual registry: additional insecure **and** allowed; operator CP
       keeps `content_provider_registry_ip`
 - [ ] `cifmw_set_containers_preserve_unlisted: true`
@@ -468,3 +492,4 @@ OpenStackVersion are a test-filter problem, not an injection problem.
 | CRC/EDPM skipped after a short consumer-smoke failure | Expected if smoke is a tempest dependency: pull, inspect, or deployment-key resolution failed. Fix the s2i provider return, then tempest will run. |
 | Smoke job: `Job s2i-openstack-container-content-provider not defined` | Smoke depends on a job name that is not in this pipeline. On an operator repo depend on `<service>-s2i-content-provider`. |
 | Registry gone while tempest is still pulling | Tempest lost its **direct** dependency on the s2i content provider (depended only on smoke). Keep the provider listed on tempest. |
+| Neutron/MariaDB/Glance image stays on payload defaults in an operator job | Copied `s2i_ci_skip_os_custom_images` from `s2i-openstack-deploy-validation`; that skip list is only for this repo's gate |

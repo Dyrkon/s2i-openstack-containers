@@ -54,6 +54,10 @@ openstack_version:
       - netUtilsImage
     designate/unbound:
       - designateUnboundImage
+    # Mapped for operator consumers. s2i-openstack-deploy-validation omits
+    # this key via s2i_ci_skip_os_custom_images until the s2i glance image
+    # handles KOLLA_BOOTSTRAP db-sync (kolla_extend_start). Do not replace
+    # with a quay master-latest pin.
     glance/glance-api:
       - glanceAPIImage
     heat/heat-api:
@@ -74,6 +78,9 @@ openstack_version:
       - manilaAPIImage
     manila/manila-scheduler:
       - manilaSchedulerImage
+    # Mapped for operator consumers. s2i-openstack-deploy-validation omits
+    # this key via s2i_ci_skip_os_custom_images until operators adopt
+    # eventless master images. Do not replace with a quay master-latest pin.
     mariadb/mariadb:
       - mariadbImage
     memcached/memcached:
@@ -82,10 +89,16 @@ openstack_version:
       - ironicNeutronAgentImage
     neutron/neutron-dhcp-agent:
       - edpmNeutronDhcpAgentImage
+    # Mapped for operator consumers. s2i-openstack-deploy-validation omits
+    # this key via s2i_ci_skip_os_custom_images until operators adopt
+    # eventless master images. Do not replace with a quay master-latest pin.
     neutron/neutron-metadata-agent-ovn:
       - edpmNeutronMetadataAgentImage
     neutron/neutron-ovn-agent:
       - edpmNeutronOvnAgentImage
+    # Mapped for operator consumers. s2i-openstack-deploy-validation omits
+    # this key via s2i_ci_skip_os_custom_images until operators adopt
+    # eventless master images. Do not replace with a quay master-latest pin.
     neutron/neutron-server:
       - neutronAPIImage
     neutron/neutron-sriov-agent:

@@ -63,10 +63,25 @@
     vars:
       content_provider_registry_ip: "{{ s2i_content_provider_registry_ip }}"
       cifmw_set_containers_preserve_unlisted: true
+      # Empty by default so operator consumers inject every mapped key.
+      # s2i-openstack-deploy-validation overrides this with unready keys.
+      s2i_ci_skip_os_custom_images: []
       cifmw_set_containers_images: >-
         {{
-          s2i_content_provider_os_custom_container_images | dict2items |
-          json_query('[].{name: key, full_registry: value}')
+          (
+            s2i_content_provider_os_custom_container_images | dict2items |
+            rejectattr('key', 'in', s2i_ci_skip_os_custom_images) | list |
+            json_query('[].{name: key, full_registry: value}')
+          ) + [{
+            'name': 'cinderVolumeImages',
+            'full_registry': (
+              s2i_content_provider_registry_ip ~ ':5001/' ~
+              s2i_ci_content.namespace ~
+              '/openstack-cinder-volume:' ~
+              s2i_ci_content.tag
+            ),
+            'backends': ['volume1']
+          }]
         }}
       cifmw_test_operator_stages:
         - name: tempest
@@ -84,7 +99,9 @@
       provider applied to OpenStackVersion during edpm_prepare, then runs
       a tempest smoke suite. Images without an OpenStackVersion mapping
       (and services s2i does not build, such as nova-compute) keep the
-      operator defaults.
+      operator defaults. Keys in s2i_ci_skip_os_custom_images are also
+      omitted so preserve_unlisted keeps payload defaults until those
+      operators adopt eventless master images.
 
       Used in the s2i repo's github-check pipeline to gate PRs
       (especially update-sources bumps) on real deployment validation.
@@ -94,6 +111,27 @@
     required-projects:
       - name: openstack-k8s-operators/s2i-openstack-containers
     vars:
+      # Omit unready s2i images so preserve_unlisted keeps payload
+      # defaults. Do not pin quay master-latest in image-mappings.yaml.
+      cifmw_test_operator_tempest_image: quay.io/openstack-s2i-containers/openstack-tempest
+      cifmw_test_operator_tempest_image_tag: master-latest
+      s2i_ci_skip_os_custom_images:
+        # https://redhat.atlassian.net/browse/OSPRH-28744
+        - neutronAPIImage
+        # https://redhat.atlassian.net/browse/OSPRH-28744
+        - edpmNeutronMetadataAgentImage
+        # https://redhat.atlassian.net/browse/OSPRH-36257
+        - horizonImage
+        # Waiting for https://github.com/openstack-k8s-operators/openstack-operator/pull/2055
+        - mariadbImage
+        # Glance seems good already to remove from here and confirm
+        - glanceAPIImage
+        # https://redhat.atlassian.net/browse/OSPRH-36259
+        - novaAPIImage
+        # https://redhat.atlassian.net/browse/OSPRH-36292
+        - manilaAPIImage
+        # https://redhat.atlassian.net/browse/OSPRH-36292
+        - manilaSchedulerImage
       s2i_tempest_include_list: |
         tempest.api.compute.servers.test_create_server.ServersTestJSON.test_list_servers
         tempest.api.compute.servers.test_server_actions.ServerActionsTestJSON.test_reboot_server_hard
