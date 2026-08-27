@@ -15,7 +15,6 @@ pluggy==1.6.0
 poetry-core==2.4.1
 pycparser==3.0
 pyproject-hooks==1.2.0
-scikit-build-core==1.0.3
 semantic-version==2.10.0
 setuptools-rust==1.13.0
 setuptools-scm==10.2.1
