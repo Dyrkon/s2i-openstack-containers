@@ -15,7 +15,6 @@ croniter==6.2.4
 debtcollector==3.1.0
 decorator==5.3.1
 dnspython==2.8.0
-docker==7.2.0
 dogpile-cache==1.5.0
 eventlet==0.41.2
 fasteners==0.20
@@ -89,7 +88,6 @@ pyparsing==3.3.2
 pyperclip==1.11.0
 python-barbicanclient==7.5.0
 python-binary-memcached==0.32.0
-python-blazarclient==4.5.0
 python-cinderclient==9.9.0
 python-dateutil==2.9.0.post0
 python-designateclient==7.0.0
@@ -97,18 +95,14 @@ python-glanceclient==4.12.0
 python-heatclient==5.2.0
 python-ironicclient==6.2.0
 python-keystoneclient==5.8.0
-python-magnumclient==4.11.0
 python-manilaclient==6.2.0
 python-memcached==1.62
-python-mistralclient==6.2.0
 python-neutronclient==13.0.0
 python-novaclient==18.13.0
 python-octaviaclient==3.14.0
 python-openstackclient==10.2.1
 python-swiftclient==4.10.0
-python-troveclient==8.10.0
 python-zaqarclient==4.6.0
-python-zunclient==5.4.0
 pyyaml==6.0.3
 redis==8.1.0
 referencing==0.37.0
@@ -136,7 +130,6 @@ vine==5.1.0
 warlock==2.1.0
 wcwidth==0.8.2
 webob==1.8.11
-websocket-client==1.9.0
 wrapt==2.3.0
 yappi==1.7.6
 yaql==3.2.0

@@ -1,0 +1,9 @@
+# OpenStack client libraries for services not used in RDO deployments.
+# Excluding these prevents pulling heavy transitive dependency trees.
+# The distgit drops these from requirements.txt too.
+# Source: https://raw.githubusercontent.com/rdo-packages/heat-distgit/rpm-master/openstack-heat.spec
+python-blazarclient
+python-zunclient
+python-magnumclient
+python-mistralclient
+python-troveclient
