@@ -1,0 +1,9 @@
+# See docs/excluding-requirements.md
+# pyzmq intentionally omitted (present in requirements.txt):
+# only used by neutron-fwaas's optional NFLOG firewall-logging driver
+# (neutron_fwaas/privileged/netfilter_log/libnetfilter_log.py, via
+# eventlet.green.zmq) -- not needed for the default FWaaS logging path.
+# Building it from source needs a system libzmq (zeromq-devel), which isn't
+# available in rpms.repo/fast-datapath/CRB, only EPEL10; skipping it avoids
+# that dependency entirely. The NFLOG driver won't work without it.
+pyzmq

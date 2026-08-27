@@ -39,6 +39,17 @@ RUN cp /deps-upper-constraints.txt /tmp/build-constraints.txt && \
       fi; \
     done
 
+COPY excluded-requirements.txt /tmp/excluded-requirements.txt
+RUN sed -e 's/#.*//' -e 's/[[:space:]]//g' -e '/^$/d' /tmp/excluded-requirements.txt | \
+    while IFS= read -r pkg; do \
+      for req in /src/*/requirements.txt /src/overrides/*/requirements.txt; do \
+        if [ -f "${req}" ]; then \
+          sed -i -E "/^${pkg}([[:space:]<>=!~;,#[]|\$)/Id" "${req}"; \
+        fi; \
+      done; \
+    done && \
+    rm /tmp/excluded-requirements.txt
+
 # Build wheels from all source packages and overrides (neutron, networking-baremetal,
 # networking-generic-switch, neutron-fwaas, tap-as-a-service)
 RUN for pkg in /src/*/ /src/overrides/*/; do \
