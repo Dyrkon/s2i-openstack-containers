@@ -44,6 +44,8 @@ openstack_version:
       - designateProducerImage
     designate/designate-worker:
       - designateWorkerImage
+    designate/netutils:
+      - netUtilsImage
     designate/unbound:
       - designateUnboundImage
     glance/glance-api:
