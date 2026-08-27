@@ -1,0 +1,6 @@
+# awscurl is not used in our deployments and pulls a heavy transitive tree
+# (awscrt, boto3, s3transfer, configargparse) that must otherwise be compiled
+# from source under PIP_NO_BINARY=:all:. The RDO ceilometer distgit strips it
+# from requirements.txt in %prep (%global excluded_reqs awscurl) too.
+# See docs/excluding-requirements.md.
+awscurl
