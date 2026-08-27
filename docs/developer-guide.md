@@ -30,7 +30,7 @@ containers/
   <project>/                      # e.g., watcher
     sources.txt                   # Pinned sources for this project (service repo + upper-constraints)
     src/                          # Cloned sources (auto-managed, .gitkeep only in git)
-    rpms.in.yaml                  # [generated] RPM packages for rpm-lockfile-prototype
+    rpms.in.yaml                  # [generated] RPM packages for rpm-lockfile-prototype - used downstream
     requirements.lock.<stream>    # [generated] pip-compile lockfile
     buildrequirements.lock.<stream> # [generated] pybuild-deps build lockfile
     upper-constraints.txt.<stream># [generated] upstream constraints snapshot
