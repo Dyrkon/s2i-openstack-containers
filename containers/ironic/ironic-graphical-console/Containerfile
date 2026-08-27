@@ -1,0 +1,125 @@
+# OpenStack Ironic Graphical Console
+#
+
+ARG BASE_IMAGE=localhost/openstack/openstack-base:latest
+ARG EXTENSION_PATH_RELATIVE="share/mozilla/extensions/{ec8030f7-c20a-464f-9b0e-13a3a9e97384}/@ironic-console.openstack.org"
+
+# --- Build stage: compile wheels and collect upstream config ---
+FROM ${BASE_IMAGE} AS build
+
+
+# Copy constraints file and all source repos into the build stage
+ARG CONSTRAINTS_FILE=requirements.lock
+COPY src/ /src/
+COPY ironic-graphical-console/src/ /src/
+
+COPY ironic-graphical-console/builddeps.txt /tmp/builddeps.txt
+RUN pkgs=$(cat /tmp/builddeps.txt | grep -v '^#' | grep -v '^$' | tr '\n' ' ') && \
+    if [ -n "${pkgs}" ]; then microdnf -y install ${pkgs} && microdnf clean all; fi
+
+# Add the scripts which run on container start
+ARG VNC_CONTAINER_SRC=/src/ironic/tools/vnc-container
+ARG EXTENSION_PATH_RELATIVE
+RUN mkdir -p /build/${EXTENSION_PATH_RELATIVE}; \
+    mkdir -p /build/local/bin; \
+    mkdir -p /build/bin; \
+    cp ${VNC_CONTAINER_SRC}/extension/* /build/${EXTENSION_PATH_RELATIVE}; \
+    cp ${VNC_CONTAINER_SRC}/bin/*.sh /build/local/bin; \
+    cp ${VNC_CONTAINER_SRC}/bin/*.py /build/local/bin; \
+    cp -r ${VNC_CONTAINER_SRC}/drivers /drivers
+
+# compile Xfvb from source
+WORKDIR /src/xserver
+RUN ./autogen.sh --prefix=/usr \
+    --disable-xorg \
+    --disable-xnest \
+    --enable-xvfb \
+    --disable-xwin \
+    --disable-kdrive \
+    --disable-xephyr \
+    --disable-glamor \
+    --disable-glx \
+    --disable-dri \
+    --disable-dri2 \
+    --disable-dri3 \
+    --with-xkb-path=/usr/share/X11/xkb \
+    --with-xkb-output=/var/lib/xkb && \
+    make && \
+    make install && \
+    cp /usr/bin/Xvfb /build/bin
+
+# compile libvncserver as a static library, required by x11vnc
+RUN mkdir -p /src/libvncserver/build
+WORKDIR /src/libvncserver/build
+RUN cmake .. \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DBUILD_SHARED_LIBS=OFF \
+    -DWITH_JPEG=ON \
+    -DWITH_PNG=ON \
+    -DWITH_OPENSSL=ON \
+    -DWITH_ZLIB=ON && \
+    make && \
+    make install && \
+    make clean
+
+# compile x11vnc from source, statically linked to libvncserver
+WORKDIR /src/x11vnc
+RUN PKG_CONFIG_PATH=/build/lib64/pkgconfig:$PKG_CONFIG_PATH \
+    LDFLAGS="$(pkg-config --static --libs libvncserver)" \
+    ./autogen.sh --prefix=/usr && \
+    make && \
+    make install && \
+    cp /usr/bin/x11vnc /build/bin
+
+RUN for src_dir in /src/*/ /src/overrides/*/; do \
+      if [ -d "${src_dir}" ]; then \
+        if [ -f "${src_dir}/setup.cfg" ]; then \
+            pkg_name=$(grep -m1 '^name' "${src_dir}/setup.cfg" | sed 's/.*=\s*//'); \
+            commit=$(git -C "${src_dir}" rev-parse HEAD 2>/dev/null || echo "unknown"); \
+            version=$(ls /wheels/pkgs/${pkg_name//-/_}-*.whl 2>/dev/null | head -1 | sed 's/.*-\([0-9][^-]*\)-.*/\1/' || echo "unknown"); \
+            echo "${pkg_name},${commit},${version}"; \
+        elif [ -d "${src_dir}/.git" ]; then \
+            pkg_name=$(basename ${src_dir}); \
+            commit=$(git -C "${src_dir}" rev-parse HEAD 2>/dev/null || echo "unknown"); \
+            version=$(git -C "${src_dir}" describe --tags --exact-match 2>/dev/null || echo "unknown"); \
+            echo "${pkg_name},${commit},${version}"; \
+        fi; \
+      fi; \
+    done > /source-built-packages.txt
+
+# --- Runtime stage: install from wheels ---
+FROM ${BASE_IMAGE}
+
+LABEL summary="OpenStack Ironic Graphical Console" \
+      io.k8s.description="Ironic BMC Console to VNC service"
+
+ENV DISPLAY_WIDTH=1280
+ENV DISPLAY_HEIGHT=960
+
+ENV APP='fake'
+ENV APP_INFO={}
+ENV READ_ONLY=False
+ENV DEBUG=0
+ENV FIREFOX=firefox
+ENV FIREFOX_USER=ironic
+ENV FIREFOX_USER_HOME=/var/lib/${FIREFOX_USER}
+ENV FIREFOX_CONFIG_DIR=${FIREFOX_USER_HOME}/.mozilla/firefox
+ARG EXTENSION_PATH_RELATIVE
+ENV EXTENSION_PATH="/usr/${EXTENSION_PATH_RELATIVE}"
+
+# Create the ironic user (UID 42422)
+RUN uid_gid_manage ironic
+
+# Install the system dependencies
+COPY ironic-graphical-console/bindeps.txt /tmp/bindeps.txt
+RUN pkgs=$(cat /tmp/bindeps.txt | grep -v '^#' | grep -v '^$' | tr '\n' ' ') && \
+    if [ -n "${pkgs}" ]; then microdnf -y install ${pkgs} && microdnf clean all; fi && rm /tmp/bindeps.txt
+
+# Install build dependencies
+COPY --from=build /build /usr
+COPY --from=build /source-built-packages.txt /source-built-packages.txt
+COPY --from=build /build /build
+COPY --from=build /drivers /drivers
+
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
+CMD ["/usr/local/bin/start-x11vnc.py"]

@@ -14,32 +14,75 @@ arches:
   - aarch64
 
 packages:
+  - autoconf
+  - automake
   - cargo
+  - cmake
   - cpio
   - dnsmasq
   - dosfstools
   - e2fsprogs
+  - firefox
   - gcc
   - gcc-c++
   - gdisk
+  - git
   - git-core
   - grub2-efi-x64
+  - hostname
   - httpd
   - inotify-tools
   - ipmitool
   - iproute
   - ipxe-bootimgs
+  - libX11
+  - libX11-devel
+  - libXau
+  - libXau-devel
+  - libXdamage
+  - libXdamage-devel
+  - libXext
+  - libXext-devel
+  - libXfixes
+  - libXfixes-devel
+  - libXfont2
+  - libXfont2-devel
+  - libXmu
+  - libXmu-devel
+  - libXrandr
+  - libXrandr-devel
+  - libXtst
+  - libXtst-devel
+  - libdrm
+  - libdrm-devel
   - libffi
   - libffi-devel
+  - libglvnd-glx
+  - libjpeg-turbo
+  - libjpeg-turbo-devel
+  - libpng
+  - libpng-devel
+  - libtool
+  - libxkbfile
+  - libxkbfile-devel
   - libxml2
   - libxml2-devel
+  - libxshmfence
+  - libxshmfence-devel
   - libxslt
   - libxslt-devel
+  - make
   - mod_ssl
   - mtools
+  - net-tools
   - openssh-clients
+  - openssl
   - openssl-devel
   - parted
+  - pixman
+  - pixman-devel
+  - pkgconfig
+  - procps
   - psmisc
   - pykickstart
   - python3
@@ -48,12 +91,22 @@ packages:
   - python3-devel
   - python3-mod_wsgi
   - python3-pip
+  - python3-requests
   - python3-setuptools
   - python3-systemd
+  - python3-urllib3
   - qemu-img
   - rust
   - shim
   - syslinux-nonlinux
   - util-linux
+  - which
   - xfsprogs
+  - xkbcomp
+  - xorg-x11-font-utils
+  - xorg-x11-proto-devel
+  - xorg-x11-util-macros
+  - xorg-x11-xtrans-devel
   - xorriso
+  - zlib
+  - zlib-devel
