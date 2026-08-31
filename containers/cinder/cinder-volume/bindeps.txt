@@ -2,3 +2,6 @@
 iscsi-initiator-utils
 # Ceph RBD support (from centos10-storage repo in base image)
 ceph-common
+# qemu-img is used by cinder for encrypted volume creation (LUKS),
+# image format inspection, and image conversion (qemu-img create/info/convert)
+qemu-img
