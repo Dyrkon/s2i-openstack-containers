@@ -2,3 +2,6 @@
 httpd
 mod_ssl
 python3-mod_wsgi
+# python3-numpy is a dependency of websockify. The RPM version is compiled
+# against system BLAS/LAPACK libraries. Building from source is very slow
+python3-numpy
