@@ -179,8 +179,9 @@ for packages shared across all service images.
 ## Auto-generated files
 
 These files are created by `build.sh update-sources` and refreshed by
-`build.sh update-lockfiles`. They should be committed to the repository
-but never edited by hand.
+`build.sh update-lockfiles`. Speculative CI refreshes lockfiles (not
+`rpms.in.yaml`) with `build.sh sync-locks` without rewriting `sources.txt`.
+They should be committed to the repository but never edited by hand.
 
 | File | Location | Generated from |
 |------|----------|----------------|
@@ -227,10 +228,10 @@ system packages and `pip install pip-tools` for the Python dependencies.
 
 ### Python packages
 
-- `pip-tools` -- provides `pip-compile`, used by `update-sources` to
-  generate lockfiles
-- `pybuild-deps` -- used by `update-sources` to generate build-requirements
-  lockfiles
+- `pip-tools` -- provides `pip-compile`, used by `update-sources` and
+  `sync-locks` to generate lockfiles
+- `pybuild-deps` -- used by `update-sources` and `sync-locks` to generate
+  build-requirements lockfiles
 
 If using tox (recommended), Python dependencies are installed automatically
 in the tox virtualenv.
@@ -249,6 +250,9 @@ STREAM=master tox -eupdate-sources
 # Regenerate lockfiles after modifying dependency files
 STREAM=master tox -eupdate-lockfiles
 STREAM=master tox -eupdate-lockfiles -- cinder
+
+# Relock staged/current src trees without advancing pins
+STREAM=master tox -esync-locks -- heat
 
 # Build all images
 STREAM=master tox -ebuild
@@ -329,6 +333,36 @@ least once so that `upper-constraints.txt.<stream>` and
 
 For pure RPM projects (no `sources.txt` -- see below), `update-lockfiles`
 only regenerates `rpms.in.yaml` and skips lockfile generation.
+
+### Relocking staged sources (speculative CI)
+
+**When to use:** After Zuul stages patched checkouts into `src/`, regenerate
+lockfiles so the image build resolves against the staged `requirements.txt`
+and current upper-constraints. Unlike `update-sources`, this does **not**
+advance unstaged sibling pins or rewrite `sources.txt`. Unlike
+`update-lockfiles`, it compiles from `src/*/requirements.txt` rather than
+from the existing lockfile.
+
+```bash
+STREAM=master ./build.sh sync-locks <project-or-all>
+REQUIREMENTS_SRC=/path/to/requirements STREAM=master ./build.sh sync-locks heat
+```
+
+Or via tox:
+
+```bash
+STREAM=master uvx --python 3.12 tox -esync-locks -- heat
+```
+
+This will:
+1. Refresh `upper-constraints.txt.<stream>` from `REQUIREMENTS_SRC` or the
+   stream branch tip.
+2. Clone any missing sources at the committed pin; leave existing `src/`
+   trees in place.
+3. Generate `requirements.lock.<stream>` from current source requirements
+   plus `pythondeps.txt` / `pythonbuilddeps.txt`.
+4. Generate `buildrequirements.lock.<stream>` via `pybuild-deps compile`.
+5. Create default-stream symlinks if `STREAM == DEFAULT_STREAM`.
 
 ### Pure RPM projects
 
@@ -548,6 +582,7 @@ Two-stage build:
 | `PARALLEL` | `nproc` | Max concurrent builds for `build-parallel` |
 | `BUILD_LOGS_DIR` | *(tmpdir, deleted)* | Directory to persist `build-parallel` logs |
 | `SKIP_HASH_UPDATE` | *(unset)* | If set, `update-sources` skips updating pinned hashes and clones repos at existing pins; lockfiles are still regenerated |
+| `REQUIREMENTS_SRC` | *(unset)* | Directory containing `upper-constraints.txt`. When set, `sync-locks` copies that file instead of fetching the stream branch tip |
 | `PIP_NO_BINARY` | *(unset)* | If set, passed as `--build-arg` to the container build so pip builds packages from source (e.g., `:all:`) |
 
 ## CI path filtering
@@ -665,6 +700,26 @@ single source of truth for the source manifest format.
 names (`opendev.org/openstack/tempest`). The staging playbook maps both
 forms so speculative checkouts are copied into `src/` instead of
 building from the pinned git hash.
+
+Staging alone is not enough: committed `requirements.lock.<stream>` still
+pins the last `update-sources` run. After any sources are staged, the
+content provider runs `tox -e sync-locks` for those projects. That
+command:
+
+- Refreshes `upper-constraints.txt.<stream>` from the stream branch tip,
+  or from a Zuul `openstack/requirements` checkout when one is in the
+  buildset (`REQUIREMENTS_SRC`, for example a `Depends-On` constraints
+  bump).
+- Leaves staged `src/` trees in place and clones any missing sibling
+  repos at the **committed pin**, not the branch tip.
+- Regenerates `requirements.lock.<stream>` and
+  `buildrequirements.lock.<stream>` from the current `src/*/requirements.txt`
+  trees plus `pythondeps.txt`.
+- Does **not** rewrite hashes in `sources.txt` and does **not** regenerate
+  `rpms.in.yaml`.
+
+Do not use `update-sources` here. It would advance unstaged sibling pins
+to branch tip and rewrite `sources.txt`.
 
 ### Querying source dependencies
 

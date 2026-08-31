@@ -194,6 +194,34 @@
     - name: Stage Zuul source checkouts for speculative builds
       ansible.builtin.include_tasks: stage-zuul-sources.yaml
 
+    - name: Relock staged sources against current constraints
+      when: s2i_ci_staged_projects | default([]) | length > 0
+      block:
+        - name: Ensure tox is available for lockfile generation
+          ansible.builtin.include_role:
+            name: ensure-tox
+
+        - name: Run sync-locks for staged projects
+          ansible.builtin.command:
+            argv: >-
+              {{ [ensure_tox_executable | default('tox'), '-e', 'sync-locks', '--']
+                 + s2i_ci_staged_projects }}
+            chdir: "{{ s2i_ci_container_repo }}"
+          environment:
+            STREAM: "{{ s2i_ci_stream }}"
+            REQUIREMENTS_SRC: "{{ s2i_ci_requirements_src | default('') }}"
+          register: s2i_ci_sync_locks
+          changed_when: true
+      always:
+        - name: Save sync-locks output
+          when: s2i_ci_sync_locks is defined
+          ansible.builtin.copy:
+            dest: "{{ s2i_ci_log_dir }}/sync-locks.log"
+            mode: "0644"
+            content: |
+              {{ s2i_ci_sync_locks.stdout | default('') }}
+              {{ s2i_ci_sync_locks.stderr | default('') }}
+
     - name: Build selected images
       ansible.builtin.command:
         argv:

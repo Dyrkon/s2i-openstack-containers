@@ -737,6 +737,132 @@ test_update_sources_applies_exclusions() {
   assert_no_grep '^pbr' "${lock}"
 }
 
+# ── sync-locks tests ─────────────────────────────────────────────────────
+
+test_sync_locks_preserves_source_pins() {
+  command -v pip-compile >/dev/null 2>&1 || skip_test "pip-compile not on PATH"
+
+  # pybuild-deps may fail on the six-only pin; pins are rewritten before that.
+  _run_cmd STREAM=master -- sync-locks test-svc || true
+
+  local src="${TEST_DIR}/containers/test-svc/sources.txt"
+  assert_field "${src}" master upper-constraints 5 "${REQ_HASH_OLD}"
+  assert_field "${src}" master test-svc 5 "${SVC_HASH_OLD}"
+}
+
+test_sync_locks_refreshes_constraints_at_branch_tip() {
+  command -v pip-compile >/dev/null 2>&1 || skip_test "pip-compile not on PATH"
+
+  _run_cmd STREAM=master -- sync-locks test-svc || true
+
+  local uc="${TEST_DIR}/containers/test-svc/upper-constraints.txt.master"
+  assert_file_exists "${uc}"
+  assert_grep "six==1.17.0" "${uc}"
+  assert_grep "pbr==7.0.3" "${uc}"
+  assert_field "${TEST_DIR}/containers/test-svc/sources.txt" \
+    master upper-constraints 5 "${REQ_HASH_OLD}"
+}
+
+test_sync_locks_clones_missing_at_pinned_hash() {
+  command -v pip-compile >/dev/null 2>&1 || skip_test "pip-compile not on PATH"
+
+  _run_cmd STREAM=master -- sync-locks test-svc || true
+
+  local lock="${TEST_DIR}/containers/test-svc/requirements.lock.master"
+  assert_file_exists "${lock}"
+  assert_grep "six" "${lock}"
+  # Old pin's requirements.txt is "six" only. Cloning at branch tip would
+  # pull in pbr; compiling against the pin must not.
+  assert_no_grep "^pbr" "${lock}"
+}
+
+test_sync_locks_preserves_preexisting_checkout() {
+  command -v pip-compile >/dev/null 2>&1 || skip_test "pip-compile not on PATH"
+  command -v pybuild-deps >/dev/null 2>&1 || skip_test "pybuild-deps not on PATH"
+
+  local src_dir="${TEST_DIR}/containers/test-svc/src/test-svc"
+  mkdir -p "${src_dir}"
+  echo "local-dev" > "${src_dir}/MARKER"
+  printf 'six\npbr\n' > "${src_dir}/requirements.txt"
+
+  _run_cmd STREAM=master -- sync-locks test-svc
+
+  assert_file_exists "${src_dir}/MARKER"
+  assert_grep "local-dev" "${src_dir}/MARKER"
+  assert_field "${TEST_DIR}/containers/test-svc/sources.txt" \
+    master test-svc 5 "${SVC_HASH_OLD}"
+
+  local lock="${TEST_DIR}/containers/test-svc/requirements.lock.master"
+  assert_file_exists "${lock}"
+  assert_grep "six" "${lock}"
+  assert_grep "pbr" "${lock}"
+}
+
+test_sync_locks_uses_REQUIREMENTS_SRC() {
+  command -v pip-compile >/dev/null 2>&1 || skip_test "pip-compile not on PATH"
+
+  mkdir -p "${TEST_DIR}/reqs"
+  printf 'six==1.17.0\ncustom-pkg==9.9.9\n' \
+    > "${TEST_DIR}/reqs/upper-constraints.txt"
+
+  _run_cmd STREAM=master REQUIREMENTS_SRC="${TEST_DIR}/reqs" -- sync-locks test-svc || true
+
+  local uc="${TEST_DIR}/containers/test-svc/upper-constraints.txt.master"
+  assert_file_exists "${uc}"
+  assert_grep "custom-pkg==9.9.9" "${uc}"
+  assert_no_grep "pbr" "${uc}"
+  assert_field "${TEST_DIR}/containers/test-svc/sources.txt" \
+    master upper-constraints 5 "${REQ_HASH_OLD}"
+}
+
+test_sync_locks_does_not_generate_rpms_in() {
+  command -v pip-compile >/dev/null 2>&1 || skip_test "pip-compile not on PATH"
+
+  _run_cmd STREAM=master -- sync-locks test-svc || true
+
+  assert "no rpms.in.yaml for sync-locks" \
+    test ! -f "${TEST_DIR}/containers/test-svc/rpms.in.yaml"
+}
+
+test_sync_locks_creates_default_stream_symlinks() {
+  command -v pip-compile >/dev/null 2>&1 || skip_test "pip-compile not on PATH"
+  command -v pybuild-deps >/dev/null 2>&1 || skip_test "pybuild-deps not on PATH"
+
+  # six-only pin locks make pybuild-deps 0.5.0 crash; stage a richer tree.
+  local src_dir="${TEST_DIR}/containers/test-svc/src/test-svc"
+  mkdir -p "${src_dir}"
+  printf 'six\npbr\n' > "${src_dir}/requirements.txt"
+
+  _run_cmd STREAM=master DEFAULT_STREAM=master -- sync-locks test-svc
+
+  local d="${TEST_DIR}/containers/test-svc"
+  assert_symlink "${d}/upper-constraints.txt"
+  assert_symlink "${d}/requirements.lock"
+  assert_symlink "${d}/buildrequirements.lock"
+  assert_link_target "${d}/requirements.lock" "requirements.lock.master"
+  assert_link_target "${d}/upper-constraints.txt" "upper-constraints.txt.master"
+}
+
+test_sync_locks_single_target_does_not_affect_other() {
+  command -v pip-compile >/dev/null 2>&1 || skip_test "pip-compile not on PATH"
+
+  _run_cmd STREAM=master -- sync-locks test-svc || true
+
+  assert_file_exists "${TEST_DIR}/containers/test-svc/upper-constraints.txt.master"
+  assert "no constraints for test-svc2" \
+    test ! -f "${TEST_DIR}/containers/test-svc2/upper-constraints.txt.master"
+  assert_field "${TEST_DIR}/containers/test-svc2/sources.txt" \
+    master test-svc2 5 "${SVC2_HASH_OLD}"
+}
+
+test_sync_locks_unknown_target_fails() {
+  if _run_cmd STREAM=master -- sync-locks nonexistent 2>/dev/null; then
+    echo "    ASSERTION FAILED: expected failure for unknown target"
+    return 1
+  fi
+  assert_grep "ERROR: Unknown image or project" "${TEST_DIR}/build.log"
+}
+
 # ── Run all tests ────────────────────────────────────────────────────────
 
 echo "=== update-sources tests ==="
@@ -783,6 +909,15 @@ TESTS=(
   test_update_lockfiles_pure_rpm_skips_lockfiles
   test_update_sources_all_includes_pure_rpm
   test_update_sources_applies_exclusions
+  test_sync_locks_preserves_source_pins
+  test_sync_locks_refreshes_constraints_at_branch_tip
+  test_sync_locks_clones_missing_at_pinned_hash
+  test_sync_locks_preserves_preexisting_checkout
+  test_sync_locks_uses_REQUIREMENTS_SRC
+  test_sync_locks_does_not_generate_rpms_in
+  test_sync_locks_creates_default_stream_symlinks
+  test_sync_locks_single_target_does_not_affect_other
+  test_sync_locks_unknown_target_fails
 )
 
 for t in "${TESTS[@]}"; do
