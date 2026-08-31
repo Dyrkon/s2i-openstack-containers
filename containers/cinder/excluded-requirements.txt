@@ -1,0 +1,4 @@
+# zoneinfo library is provided in python3-libs which uses system installed tzdata.
+# The distgit drops this from requirements.txt too.
+# Source: https://raw.githubusercontent.com/rdo-packages/cinder-distgit/rpm-master/openstack-cinder.spec (line 5)
+tzdata
