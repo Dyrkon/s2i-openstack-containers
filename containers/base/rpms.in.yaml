@@ -16,5 +16,6 @@ packages:
   - python3
   - python3-pip
   - sudo
+  - tzdata
   - util-linux-user
   - which
