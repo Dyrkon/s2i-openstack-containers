@@ -1,0 +1,5 @@
+# Build dependencies for compiling dumb-init C extension
+gcc
+python3-devel
+python3-pip
+python3-wheel
