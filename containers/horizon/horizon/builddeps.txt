@@ -20,6 +20,8 @@ zlib-devel
 freetype-devel
 libwebp-devel
 libtiff-devel
+ninja-build
+cmake
 # To build bcrypt / rpds-py from source
 rust
 cargo

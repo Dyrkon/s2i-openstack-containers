@@ -10,6 +10,7 @@ arches:
 
 packages:
   - cargo
+  - cmake
   - freetype
   - freetype-devel
   - gcc
@@ -27,6 +28,7 @@ packages:
   - libxml2-devel
   - libxslt-devel
   - mod_ssl
+  - ninja-build
   - openssl
   - openssl-devel
   - python3
