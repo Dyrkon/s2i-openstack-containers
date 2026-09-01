@@ -1,0 +1,19 @@
+ARG BASE_IMAGE=localhost/openstack/openstack-base:latest
+
+# RPM-only image: no Python source is built, package comes from the
+# distro repos already enabled in the base image's rpms.repo.
+FROM ${BASE_IMAGE}
+
+LABEL summary="FRR (FRRouting)" \
+      io.k8s.description="FRR dynamic routing suite (bgpd/zebra/staticd/watchfrr) with kolla interface"
+
+RUN uid_gid_manage frrvty frr
+
+COPY frr/bindeps.txt /tmp/bindeps.txt
+RUN pkgs=$(cat /tmp/bindeps.txt | grep -v '^#' | grep -v '^$' | tr '\n' ' ') && \
+    if [ -n "${pkgs}" ]; then microdnf -y install ${pkgs} && microdnf clean all && rm -rf /var/cache/dnf; fi && \
+    rm /tmp/bindeps.txt
+
+RUN mkdir -p /var/lock/subsys && chown frr: /var/lock/subsys
+
+USER frr

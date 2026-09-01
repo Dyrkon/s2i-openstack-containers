@@ -1,0 +1,12 @@
+contentOrigin:
+  repofiles:
+    - ./rpms.repo
+context:
+  bare: true
+
+arches:
+  - x86_64
+  - aarch64
+
+packages:
+  - frr
