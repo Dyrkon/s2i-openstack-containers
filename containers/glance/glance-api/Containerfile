@@ -53,7 +53,20 @@ RUN for src_dir in /src/*/ /src/overrides/*/; do \
       fi; \
     done > /source-built-packages.txt
 
+ENV PIP_NO_BINARY=""
+
+# Install wheels temporarily so entry points are available for config generation
+RUN pip3 install --no-cache-dir --prefix=/usr \
+      -c /tmp/build-constraints.txt \
+      --find-links=/wheels/deps \
+      --find-links=/wheels/pkgs \
+      /wheels/pkgs/*.whl
+
+# Generate default config and collect upstream config files
 RUN mkdir -p /configfiles/etc/glance && \
+    oslo-config-generator \
+      --config-file ${SERVICE_SRC}/etc/oslo-config-generator/glance-api.conf \
+      --output-file /configfiles/etc/glance/glance-api.conf && \
     cp -a ${SERVICE_SRC}/etc/glance-api-paste.ini /configfiles/etc/glance/
 
 # --- Runtime stage ---
@@ -85,10 +98,11 @@ RUN mkdir -p /etc/glance /var/log/glance /var/lib/glance /var/lib/glance/images 
     chown -R glance:glance /etc/glance /var/log/glance /var/lib/glance /var/cache/glance && \
     chmod 770 /var/log/glance /var/lib/glance /var/cache/glance
 
+COPY --from=build /configfiles/etc/glance/glance-api.conf /etc/glance/glance-api.conf
 COPY --from=build /configfiles/etc/glance/glance-api-paste.ini /etc/glance/glance-api-paste.ini
 
-RUN chmod 640 /etc/glance/glance-api-paste.ini && \
-    chown glance:glance /etc/glance/glance-api-paste.ini
+RUN chmod 640 /etc/glance/glance-api.conf /etc/glance/glance-api-paste.ini && \
+    chown glance:glance /etc/glance/glance-api.conf /etc/glance/glance-api-paste.ini
 
 # WSGI script for httpd
 RUN mkdir -p /var/www/cgi-bin/glance
