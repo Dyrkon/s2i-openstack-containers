@@ -74,23 +74,6 @@ RUN for src_dir in /src/*/ /src/overrides/*/; do \
       fi; \
     done > /source-built-packages.txt
 
-# Install wheels temporarily so entry points are available for config generation
-RUN pip3 install --no-cache-dir --prefix=/usr \
-      -c /tmp/build-constraints.txt \
-      --find-links=/wheels/deps \
-      --find-links=/wheels/pkgs \
-      /wheels/pkgs/*.whl
-
-# Generate default config and collect upstream config files
-# Config generation is needed by heat-manage db_sync
-RUN mkdir -p /configfiles/etc/heat/environment.d /configfiles/etc/heat/templates && \
-    oslo-config-generator \
-        --config-file ${SERVICE_SRC}/etc/heat/heat-config-generator.conf \
-        --output-file /configfiles/etc/heat/heat.conf && \
-    sed -i "/#pybasedir.*/d" /configfiles/etc/heat/heat.conf &&  \
-    cp -a ${SERVICE_SRC}/etc/heat/environment.d/default.yaml /configfiles/etc/heat/environment.d/ && \
-    cp -a ${SERVICE_SRC}/etc/heat/templates/AWS_RDS_DBInstance.yaml /configfiles/etc/heat/templates/
-
 RUN mkdir -p /configfiles/etc/heat/templates && \
     cp -a ${SERVICE_SRC}/etc/heat/api-paste.ini /configfiles/etc/heat/ && \
     cp -a ${SERVICE_SRC}/etc/heat/templates/AWS_RDS_DBInstance.yaml /configfiles/etc/heat/templates/
@@ -126,7 +109,6 @@ RUN mkdir -p /etc/heat /var/log/heat /var/lib/heat && \
     chown -R heat:heat /etc/heat /var/log/heat /var/lib/heat
 
 # Install config files — each file listed explicitly
-COPY --from=build /configfiles/etc/heat/heat.conf /etc/heat/heat.conf
 COPY --from=build /configfiles/etc/heat/api-paste.ini /etc/heat/api-paste.ini
 COPY --from=build /configfiles/etc/heat/templates/AWS_RDS_DBInstance.yaml /etc/heat/templates/AWS_RDS_DBInstance.yaml
 
