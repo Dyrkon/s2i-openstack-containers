@@ -86,6 +86,9 @@ RUN mkdir -p /etc/nova /var/log/nova /var/lib/nova && \
 
 COPY nova-api/scripts/nova-api-wsgi /usr/bin/nova-api-wsgi
 RUN chmod 755 /usr/bin/nova-api-wsgi
+COPY nova-api/scripts/nova-metadata-wsgi /usr/bin/nova-metadata-wsgi
+RUN chmod 755 /usr/bin/nova-metadata-wsgi
+
 
 COPY --from=build /configfiles/etc/nova/api-paste.ini /etc/nova/api-paste.ini
 
