@@ -53,6 +53,7 @@ RUN pkgs=$(cat /tmp/bindeps.txt | grep -v '^#' | grep -v '^$' | tr '\n' ' ') && 
 
 # Install source-built wheels + their deps from PyPI + extra Python deps
 COPY --from=build /wheels /wheels
+COPY --from=build /deps-upper-constraints.txt /deps-upper-constraints.txt
 RUN pip3 install --no-cache-dir --prefix=/usr \
       -c /deps-upper-constraints.txt \
       --find-links=/wheels/deps \
