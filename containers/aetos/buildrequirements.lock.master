@@ -10,7 +10,7 @@ hatchling==1.32.0
 maturin==1.15.0
 packaging==26.3
 pathspec==1.1.1
-pbr==7.1.1
+pbr==7.0.3
 pluggy==1.6.0
 poetry-core==2.4.1
 pycparser==3.0
