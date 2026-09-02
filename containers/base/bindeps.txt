@@ -3,7 +3,8 @@ curl
 glibc-langpack-en
 procps-ng
 python3
+python3-pip
 sudo
+tzdata
 util-linux-user
 which
-python3-pip

@@ -13,7 +13,33 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-FROM registry.access.redhat.com/ubi10/ubi-minimal:latest
+ARG UBI_BASE_IMAGE=registry.access.redhat.com/ubi10/ubi-minimal:latest
+
+# --- Build stage: compile wheels from source ---
+FROM ${UBI_BASE_IMAGE} AS build
+
+ARG CONSTRAINTS_FILE=requirements.lock
+COPY ${CONSTRAINTS_FILE} /deps-upper-constraints.txt
+
+# We can force build from source of all packages optionally
+ARG PIP_NO_BINARY=""
+ENV PIP_NO_BINARY=${PIP_NO_BINARY}
+
+COPY builddeps.txt /tmp/builddeps.txt
+RUN pkgs=$(cat /tmp/builddeps.txt | grep -v '^#' | grep -v '^$' | tr '\n' ' ') && \
+    if [ -n "${pkgs}" ]; then microdnf -y install ${pkgs}; microdnf clean all; fi
+
+COPY pythonbuilddeps.txt /tmp/pythonbuilddeps.txt
+RUN pkgs=$(cat /tmp/pythonbuilddeps.txt | grep -v '^#' | grep -v '^$' | tr '\n' ' ') && \
+    if [ -n "${pkgs}" ]; then pip3 install --no-cache-dir -c /deps-upper-constraints.txt ${pkgs}; fi
+
+# Second, build the wheels for the dependencies and place them in a different directory
+RUN pip3 wheel --no-cache-dir --no-deps \
+          --find-links=/wheels/pkgs \
+          --wheel-dir=/wheels/deps -r /deps-upper-constraints.txt
+
+# --- Runtime stage ---
+FROM ${UBI_BASE_IMAGE}
 
 LABEL maintainer="OpenStack Kubernetes Operator team"
 
@@ -28,6 +54,7 @@ ENV REQUESTS_CA_BUNDLE=/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
 USER root
 
 COPY ${CONSTRAINTS_FILE} /deps-upper-constraints.txt
+# SKIP IN DOWNSTREAM
 COPY rpms.repo /etc/yum.repos.d/rpms.repo
 
 COPY bindeps.txt /tmp/bindeps.txt
@@ -38,18 +65,21 @@ RUN if [ -f "/etc/yum.repos.d/ubi.repo" ]; then rm -f /etc/yum.repos.d/ubi.repo 
 # As this was introduced RHEL only https://redhat.atlassian.net/browse/RHEL-30258 and later bundled differently
 # for CentOS https://redhat.atlassian.net/browse/RHEL-105298
 # remove this until fixed in CentOS-10-stream
+# SKIP IN DOWNSTREAM
 RUN rpm -e openssl-fips-provider-so --nodeps || true
 
 RUN pkgs=$(cat /tmp/bindeps.txt | grep -v '^#' | grep -v '^$' | tr '\n' ' ') && \
     if [ -n "${pkgs}" ]; then microdnf -y install ${pkgs} && microdnf clean all && rm -rf /var/cache/dnf; fi && \
     rm /tmp/bindeps.txt
 
+COPY --from=build /wheels /wheels
 COPY pythondeps.txt /tmp/pythondeps.txt
 RUN extrapkgs=$(cat /tmp/pythondeps.txt | grep -v '^#' | grep -v '^$' | tr '\n' ' ') && \
     pip3 install --no-cache-dir --prefix=/usr \
       -c /deps-upper-constraints.txt \
+      --find-links=/wheels/deps \
       ${extrapkgs} && \
-    rm -rf /tmp/pythondeps.txt
+    rm -rf /wheels /tmp/pythondeps.txt
 
 # DNF configuration
 RUN crudini --set /etc/dnf/dnf.conf main clean_requirements_on_remove True && \
@@ -83,7 +113,8 @@ RUN touch /usr/local/bin/kolla_extend_start && \
     chmod 755 /usr/local/bin/kolla_extend_start
 
 # Fix nsswitch.conf
-RUN sed -ri '/^(passwd:|group:)/ s/systemd//g' /etc/nsswitch.conf
+RUN if [ -f "/etc/nsswitch.conf" ]; then sed -ri '/^(passwd:|group:)/ s/systemd//g' /etc/nsswitch.conf; fi
+RUN if [ ! -f "/etc/localtime" ]; then ln -s /usr/share/zoneinfo/Etc/UTC /etc/localtime; fi
 
 # Create /openstack directory (convention from tcib)
 RUN mkdir -p /openstack
