@@ -113,7 +113,7 @@ RUN touch /usr/local/bin/kolla_extend_start && \
     chmod 755 /usr/local/bin/kolla_extend_start
 
 # Fix nsswitch.conf
-RUN sed -ri '/^(passwd:|group:)/ s/systemd//g' /etc/nsswitch.conf
+RUN if [ -f "/etc/nsswitch.conf" ]; then sed -ri '/^(passwd:|group:)/ s/systemd//g' /etc/nsswitch.conf; fi
 RUN if [ ! -f "/etc/localtime" ]; then ln -s /usr/share/zoneinfo/Etc/UTC /etc/localtime; fi
 
 # Create /openstack directory (convention from tcib)
