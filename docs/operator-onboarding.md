@@ -115,7 +115,7 @@ Read [`containers/image-mappings.yaml`](../containers/image-mappings.yaml).
     placement — s2i does not build them; they stay on operator defaults
 - **Mapped but omitted by this repo's deploy-validation job:**
   `neutronAPIImage`, `edpmNeutronMetadataAgentImage`,
-  `mariadbImage`, and `glanceAPIImage`.
+  and `mariadbImage`.
   `s2i-openstack-deploy-validation` filters them with
   `s2i_ci_skip_os_custom_images` until those images can be consumed
   by the control plane, so `preserve_unlisted` keeps payload
@@ -205,7 +205,7 @@ current OpenStackVersion CR.
 filters that map through `s2i_ci_skip_os_custom_images`, which is empty
 by default. Only `s2i-openstack-deploy-validation` sets a skip list
 today (`neutronAPIImage`, `edpmNeutronMetadataAgentImage`,
-`mariadbImage`, `glanceAPIImage`). Do **not** copy that skip list into
+`mariadbImage`). Do **not** copy that skip list into
 `<service>-s2i-tempest`. Operator jobs should pass the full
 `s2i_content_provider_os_custom_container_images` map as shown above.
 

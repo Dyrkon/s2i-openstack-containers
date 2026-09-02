@@ -81,8 +81,23 @@
               s2i_ci_content.tag
             ),
             'backends': ['volume1']
+          }] + [{
+            'name': 'manilaShareImages',
+            'full_registry': (
+              s2i_content_provider_registry_ip ~ ':5001/' ~
+              s2i_ci_content.namespace ~
+              '/openstack-manila-share:' ~
+              s2i_ci_content.tag
+            ),
+            'backends': ['share1']
           }]
         }}
+      cifmw_test_operator_tempest_image: >-
+        {{
+          s2i_content_provider_registry_ip ~ ':5001/' ~
+          s2i_ci_content.namespace ~ '/openstack-tempest'
+        }}
+      cifmw_test_operator_tempest_image_tag: "{{ s2i_ci_content.tag }}"
       cifmw_test_operator_stages:
         - name: tempest
           type: tempest
@@ -113,8 +128,6 @@
     vars:
       # Omit unready s2i images so preserve_unlisted keeps payload
       # defaults. Do not pin quay master-latest in image-mappings.yaml.
-      cifmw_test_operator_tempest_image: quay.io/openstack-s2i-containers/openstack-tempest
-      cifmw_test_operator_tempest_image_tag: master-latest
       s2i_ci_skip_os_custom_images:
         # https://redhat.atlassian.net/browse/OSPRH-28744
         - neutronAPIImage
@@ -122,14 +135,6 @@
         - edpmNeutronMetadataAgentImage
         # Waiting for https://github.com/openstack-k8s-operators/openstack-operator/pull/2055
         - mariadbImage
-        # Glance seems good already to remove from here and confirm
-        - glanceAPIImage
-        # https://redhat.atlassian.net/browse/OSPRH-36259
-        - novaAPIImage
-        # https://redhat.atlassian.net/browse/OSPRH-36292
-        - manilaAPIImage
-        # https://redhat.atlassian.net/browse/OSPRH-36292
-        - manilaSchedulerImage
       s2i_tempest_include_list: |
         tempest.api.compute.servers.test_create_server.ServersTestJSON.test_list_servers
         tempest.api.compute.servers.test_server_actions.ServerActionsTestJSON.test_reboot_server_hard
@@ -137,6 +142,7 @@
         tempest.api.image.v2.test_images.ListImagesTest.test_list_images
         tempest.api.network.test_networks.NetworksTest.test_list_networks
         tempest.api.volume.test_volumes_list.VolumesListTestJSON.test_volume_list
+        tempest.scenario.test_server_basic_ops.TestServerBasicOps.test_server_basic_ops
 
 - job:
     name: s2i-openstack-container-consumer-smoke
