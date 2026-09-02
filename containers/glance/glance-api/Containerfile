@@ -68,7 +68,9 @@ RUN mkdir -p /configfiles/etc/glance && \
       --config-file ${SERVICE_SRC}/etc/oslo-config-generator/glance-api.conf \
       --output-file /configfiles/etc/glance/glance-api.conf && \
     cp -a ${SERVICE_SRC}/etc/glance-api-paste.ini /configfiles/etc/glance/ && \
-    cp -a ${SERVICE_SRC}/etc/metadefs /configfiles/etc/glance/metadefs
+    cp -a ${SERVICE_SRC}/etc/metadefs /configfiles/etc/glance/metadefs && \
+    cp -a /usr/etc/glance/rootwrap.conf /configfiles/etc/glance/ && \
+    cp -a /usr/etc/glance/rootwrap.d /configfiles/etc/glance/
 
 # --- Runtime stage ---
 FROM ${BASE_IMAGE}
@@ -102,11 +104,13 @@ RUN mkdir -p /etc/glance /var/log/glance /var/lib/glance /var/lib/glance/images 
 COPY --from=build /configfiles/etc/glance/glance-api.conf /etc/glance/glance-api.conf
 COPY --from=build /configfiles/etc/glance/glance-api-paste.ini /etc/glance/glance-api-paste.ini
 COPY --from=build /configfiles/etc/glance/metadefs /etc/glance/metadefs
+COPY --from=build /configfiles/etc/glance/rootwrap.conf /etc/glance/rootwrap.conf
+COPY --from=build /configfiles/etc/glance/rootwrap.d /etc/glance/rootwrap.d
 
-RUN chmod 640 /etc/glance/glance-api.conf /etc/glance/glance-api-paste.ini && \
-    chown glance:glance /etc/glance/glance-api.conf /etc/glance/glance-api-paste.ini && \
-    chown -R glance:glance /etc/glance/metadefs && \
-    chmod 640 /etc/glance/metadefs/*
+RUN chmod 640 /etc/glance/glance-api.conf /etc/glance/glance-api-paste.ini /etc/glance/rootwrap.conf && \
+    chown glance:glance /etc/glance/glance-api.conf /etc/glance/glance-api-paste.ini /etc/glance/rootwrap.conf && \
+    chown -R glance:glance /etc/glance/metadefs /etc/glance/rootwrap.d && \
+    chmod 640 /etc/glance/metadefs/* /etc/glance/rootwrap.d/*
 
 # WSGI script for httpd
 RUN mkdir -p /var/www/cgi-bin/glance
