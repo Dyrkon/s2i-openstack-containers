@@ -40,8 +40,7 @@ microversion-parse==2.1.0
 more-itertools==11.1.0
 msgpack==1.2.1
 netaddr==1.3.0
-numpy==2.4.6
-openstacksdk==4.19.0
+openstacksdk==4.20.0
 os-service-types==1.9.0
 os-traits==3.9.0
 oslo-cache==4.3.0
@@ -50,8 +49,8 @@ oslo-config==10.7.0
 oslo-context==6.5.0
 oslo-db==18.1.1
 oslo-i18n==6.9.0
-oslo-log==8.3.0
-oslo-messaging==18.2.0
+oslo-log==8.3.1
+oslo-messaging==18.3.0
 oslo-metrics==0.17.0
 oslo-middleware==8.2.0
 oslo-policy==6.0.1
@@ -79,7 +78,7 @@ pymysql==1.2.0
 pyparsing==3.3.2
 python-binary-memcached==0.32.0
 python-dateutil==2.9.0.post0
-python-keystoneclient==5.8.0
+python-keystoneclient==6.0.0
 python-memcached==1.62
 pyyaml==6.0.3
 redis==8.1.0

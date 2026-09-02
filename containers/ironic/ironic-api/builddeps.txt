@@ -8,6 +8,7 @@ python3-setuptools
 libffi-devel
 openssl-devel
 python3-cryptography
+python3-numpy
 # Required to build lxml (ironic depends on openstacksdk which needs lxml)
 libxml2-devel
 libxslt-devel

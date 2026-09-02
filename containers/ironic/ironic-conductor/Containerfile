@@ -22,9 +22,14 @@ ARG PIP_NO_BINARY=""
 ENV PIP_NO_BINARY=${PIP_NO_BINARY}
 # required to build rpds-py from source
 ENV MATURIN_NO_INSTALL_RUST=true
+ENV DOWNLOADS_X64="ipxe-bootimgs-x86 grub2-efi shim"
+ENV DOWNLOADS_AARCH64=""
+ENV DOWNLOADS_ALL="${DOWNLOADS_X64} ${DOWNLOADS_AARCH64}"
 
 COPY ironic-conductor/builddeps.txt /tmp/builddeps.txt
 RUN pkgs=$(cat /tmp/builddeps.txt | grep -v '^#' | grep -v '^$' | tr '\n' ' ') && \
+    for dl in ${DOWNLOADS_ALL}; do pkgs=$(echo " ${pkgs} " | sed "s/ ${dl} / /g"); done && \
+    pkgs=$(echo "${pkgs}" | tr -s ' ' | sed 's/^ //;s/ $//') && \
     if [ -n "${pkgs}" ]; then microdnf -y install ${pkgs} && microdnf clean all; fi
 
 COPY ironic-conductor/pythonbuilddeps.txt /tmp/pythonbuilddeps.txt
