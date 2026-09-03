@@ -38,6 +38,7 @@ markupsafe==3.0.3
 mdurl==0.1.2
 msgpack==1.2.1
 netaddr==1.3.0
+nvidia-ml-py==13.610.43
 openstacksdk==4.18.0
 os-service-types==1.8.2
 osc-lib==4.7.0
