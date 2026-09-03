@@ -37,6 +37,14 @@
 - name: Collect Zuul project names for source matching
   ansible.builtin.set_fact:
     s2i_ci_zuul_project_names: "{{ s2i_ci_zuul_name_map | list }}"
+    s2i_ci_staged_projects: []
+
+- name: Resolve Zuul requirements checkout for speculative constraints
+  when: "'openstack/requirements' in s2i_ci_zuul_name_map"
+  ansible.builtin.set_fact:
+    s2i_ci_requirements_src: >-
+      {{ s2i_ci_workspace_root }}/{{
+         zuul.projects[s2i_ci_zuul_name_map['openstack/requirements']].src_dir }}
 
 - name: Query source dependencies for each image target
   ansible.builtin.command:

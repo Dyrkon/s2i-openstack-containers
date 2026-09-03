@@ -9,3 +9,4 @@ mock_roles:
   - collect-container-logs
   - ensure-output-dirs
   - ensure-podman
+  - ensure-tox

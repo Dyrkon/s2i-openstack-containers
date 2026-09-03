@@ -6,6 +6,7 @@
 #   STREAM=hibiscus ./build.sh build watcher
 #   STREAM=master ./build.sh build cyborg/cyborg-agent
 #   ./build.sh push all
+#   STREAM=master ./build.sh sync-locks heat
 #   ./build.sh list
 #
 # Streams:
@@ -65,6 +66,11 @@
 #     containers/<project>/<BUILD_CONSTRAINTS_FILE>.<stream> (e.g., buildrequirements.lock.master)
 #     using pybuild-deps compile against the requirements lockfile.
 #
+#     sync-locks regenerates those lockfiles from the current src/ trees and a
+#     refreshed upper-constraints file without rewriting pinned hashes in
+#     sources.txt. Missing clones use the committed pin; existing checkouts
+#     (including Zuul-staged sources) are left in place.
+#
 # Environment variables:
 #   STREAM            Stream name (required for build)
 #   REGISTRY          Container registry (default: localhost)
@@ -80,6 +86,11 @@
 #   SKIP_HASH_UPDATE  If set, update-sources skips updating pinned hashes in
 #                     sources.txt and clones repos at existing pinned hashes
 #                     instead. Lockfiles and rpms.in.yaml are still regenerated.
+#   REQUIREMENTS_SRC  Directory containing upper-constraints.txt. When set,
+#                     sync-locks copies that file instead of fetching the
+#                     stream branch tip (used when Zuul has checked out
+#                     openstack/requirements, e.g. a Depends-On constraints
+#                     bump).
 #   PIP_NO_BINARY     If set, passed as --build-arg to buildah so Containerfiles
 #                     can set ENV PIP_NO_BINARY. Use ":all:" to force pip to
 #                     build all packages from source instead of using wheels.
@@ -103,6 +114,7 @@ BUILD_CONSTRAINTS_FILE="${BUILD_CONSTRAINTS_FILE:-buildrequirements.lock}"
 UPSTREAM_CONSTRAINTS="upper-constraints.txt"
 DEFAULT_STREAM="${DEFAULT_STREAM:-master}"
 SKIP_HASH_UPDATE="${SKIP_HASH_UPDATE:-}"
+REQUIREMENTS_SRC="${REQUIREMENTS_SRC:-}"
 PIP_NO_BINARY="${PIP_NO_BINARY:-}"
 REGISTRY_AUTH_FILE="${REGISTRY_AUTH_FILE:-}"
 REGISTRY_CERT_DIR="${REGISTRY_CERT_DIR:-}"
@@ -228,6 +240,60 @@ ensure_project_constraints() {
   echo "ERROR: No constraints file at ${constraints_file}" >&2
   echo "       Add an 'upper-constraints' entry to containers/${project}/sources.txt for stream '${stream}'," >&2
   echo "       or place the file manually." >&2
+  return 1
+}
+
+# Overwrite upper-constraints.txt.<stream> for a project from either a local
+# requirements checkout (REQUIREMENTS_SRC) or the stream's branch tip.
+# Unlike ensure_project_constraints, this always refreshes the file and never
+# uses the pinned hash. sources.txt is not rewritten.
+refresh_project_constraints() {
+  local project="$1"
+  local stream="$2"
+  local project_dir="${CONTAINERS_DIR}/${project}"
+  local constraints_file="${project_dir}/${UPSTREAM_CONSTRAINTS}.${stream}"
+  local project_sources="${project_dir}/sources.txt"
+
+  if [[ ! -f "${project_sources}" ]]; then
+    echo "--- Skipping constraints refresh for ${project} (no sources.txt) ---"
+    return
+  fi
+
+  if [[ -n "${REQUIREMENTS_SRC}" ]]; then
+    local src_uc="${REQUIREMENTS_SRC}/upper-constraints.txt"
+    if [[ ! -f "${src_uc}" ]]; then
+      echo "ERROR: REQUIREMENTS_SRC=${REQUIREMENTS_SRC} has no upper-constraints.txt" >&2
+      return 1
+    fi
+    echo "--- Copying ${UPSTREAM_CONSTRAINTS}.${stream} for ${project} from REQUIREMENTS_SRC ---"
+    cp "${src_uc}" "${constraints_file}"
+    return
+  fi
+
+  while IFS=' ' read -r entry_stream name url branch pinned_hash; do
+    [[ -z "${entry_stream}" || "${entry_stream}" == \#* ]] && continue
+    [[ "${entry_stream}" != "${stream}" ]] && continue
+    if [[ "${name}" == "upper-constraints" ]]; then
+      echo "--- Fetching ${UPSTREAM_CONSTRAINTS}.${stream} for ${project} from ${url} at ${branch} tip ---"
+      local tmp_repo tip_hash
+      tmp_repo=$(mktemp -d)
+      git clone --no-checkout "${url}" "${tmp_repo}" 2>/dev/null
+      tip_hash=$(git -C "${tmp_repo}" rev-parse --verify "origin/${branch}" 2>/dev/null \
+        || git -C "${tmp_repo}" rev-parse --verify "${branch}" 2>/dev/null)
+      if [[ -z "${tip_hash}" ]]; then
+        echo "ERROR: Could not resolve ref '${branch}' for ${url}" >&2
+        rm -rf "${tmp_repo}"
+        return 1
+      fi
+      git -C "${tmp_repo}" checkout "${tip_hash}" -- upper-constraints.txt
+      cp "${tmp_repo}/upper-constraints.txt" "${constraints_file}"
+      echo "  upper-constraints: using ${tip_hash} (${branch} tip; pin ${pinned_hash} unchanged)"
+      rm -rf "${tmp_repo}"
+      return
+    fi
+  done < "${project_sources}"
+
+  echo "ERROR: No upper-constraints entry in ${project_sources} for stream '${stream}'" >&2
   return 1
 }
 
@@ -1361,6 +1427,81 @@ update_sources() {
   done
 }
 
+# Relock staged (or pinned) sources against current upper-constraints without
+# advancing sources.txt pins. Missing clones use clone_at_hash; existing
+# checkouts are left in place. Constraints come from REQUIREMENTS_SRC when
+# set, otherwise the stream branch tip.
+sync_locks() {
+  local stream="${!#}"
+  local targets_args=("${@:1:$#-1}")
+
+  if [[ -z "${stream}" ]]; then
+    echo "ERROR: STREAM is required for sync-locks." >&2
+    echo "       Example: STREAM=master ./build.sh sync-locks watcher" >&2
+    return 1
+  fi
+
+  local targets
+  targets=($(resolve_targets "${targets_args[@]}"))
+
+  declare -A projects_seen
+
+  for img in "${targets[@]}"; do
+    local project
+    project="$(project_name "${img}")"
+
+    if [[ -z "${project}" ]]; then
+      if [[ "${img}" == "base" ]] && [[ -z "${projects_seen[base]:-}" ]]; then
+        projects_seen["base"]=1
+        ensure_sources_for_stream "base" "${stream}"
+        refresh_project_constraints "base" "${stream}" || return 1
+      fi
+      continue
+    fi
+
+    ensure_sources_for_stream "${img}" "${stream}"
+
+    if [[ -z "${projects_seen[$project]:-}" ]]; then
+      projects_seen["${project}"]=1
+      refresh_project_constraints "${project}" "${stream}" || return 1
+    fi
+  done
+
+  echo ""
+  echo "=== Generating requirements.lock files ==="
+  generate_locks_for_targets "${targets_args[@]}" "${stream}" || return 1
+
+  echo ""
+  echo "=== Generating buildrequirements.lock files ==="
+  generate_buildlocks_for_targets "${targets_args[@]}" "${stream}" || return 1
+
+  if [[ "${stream}" == "${DEFAULT_STREAM}" ]]; then
+    echo ""
+    echo "=== Creating default stream symlinks (${DEFAULT_STREAM}) ==="
+    declare -A _symlink_seen_sl
+    for img in "${targets[@]}"; do
+      local s_project
+      s_project="$(project_name "${img}")"
+      if [[ -z "${s_project}" ]]; then
+        [[ "${img}" != "base" ]] && continue
+        s_project="base"
+      fi
+      [[ -n "${_symlink_seen_sl[$s_project]:-}" ]] && continue
+      _symlink_seen_sl["${s_project}"]=1
+
+      local s_pdir="${CONTAINERS_DIR}/${s_project}"
+      local s_suffix s_streamed
+      for s_suffix in "${UPSTREAM_CONSTRAINTS}" "${CONSTRAINTS_FILE}" "${BUILD_CONSTRAINTS_FILE}"; do
+        s_streamed="${s_pdir}/${s_suffix}.${DEFAULT_STREAM}"
+        if [[ -f "${s_streamed}" ]]; then
+          ln -sf "${s_suffix}.${DEFAULT_STREAM}" "${s_pdir}/${s_suffix}"
+          echo "  ${s_pdir}/${s_suffix} -> ${s_suffix}.${DEFAULT_STREAM}"
+        fi
+      done
+    done
+  fi
+}
+
 # Main
 ACTION="${1:-}"
 shift || true
@@ -1504,6 +1645,9 @@ case "${ACTION}" in
     fi
     list_sources "${TARGETS[0]}" "${TARGETS[1]:-}"
     ;;
+  sync-locks)
+    sync_locks "${TARGETS[@]}" "${STREAM}"
+    ;;
   update-sources)
     if [[ -n "${SKIP_HASH_UPDATE}" ]]; then
       echo "=== Skipping hash update (SKIP_HASH_UPDATE is set) ==="
@@ -1611,7 +1755,7 @@ case "${ACTION}" in
     list_images
     ;;
   *)
-    echo "Usage: STREAM=<name> $0 {build|build-parallel|push|refs|resolve|auto-detect|list-sources|update-sources|update-lockfiles|install-deps|list} [target ...]"
+    echo "Usage: STREAM=<name> $0 {build|build-parallel|push|refs|resolve|auto-detect|list-sources|sync-locks|update-sources|update-lockfiles|install-deps|list} [target ...]"
     echo ""
     echo "Commands:"
     echo "  build              Build one or more images sequentially"
@@ -1628,6 +1772,9 @@ case "${ACTION}" in
     echo "                     the container images whose sources.txt references that project"
     echo "  list-sources       Print pipe-delimited source records for a target:"
     echo "                     name|canonical_project|url|dest_dir"
+    echo "  sync-locks         Relock current src/ trees against current constraints"
+    echo "                     without advancing sources.txt pins. Used by speculative CI"
+    echo "                     after staging Zuul checkouts."
     echo "  update-sources     Fetch latest upstream commits and regenerate lockfiles"
     echo "  update-lockfiles   Regenerate lockfiles without advancing source pins"
     echo "  install-deps       Install system packages required for building (git, buildah,"
@@ -1655,6 +1802,7 @@ case "${ACTION}" in
     echo "  PARALLEL          Max concurrent builds for build-parallel (default: nproc)"
     echo "  BUILD_LOGS_DIR    Persist build-parallel logs to this directory"
     echo "  SKIP_HASH_UPDATE  Skip updating pinned hashes; regenerate locks only"
+    echo "  REQUIREMENTS_SRC  Directory with upper-constraints.txt for sync-locks"
     echo "  PIP_NO_BINARY     Pass PIP_NO_BINARY to container build (e.g., ':all:')"
     echo "  REGISTRY_AUTH_FILE  Registry authentication file for pushes"
     echo "  REGISTRY_CERT_DIR   Registry TLS certificate directory for pushes"
