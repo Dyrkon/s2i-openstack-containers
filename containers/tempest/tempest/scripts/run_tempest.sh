@@ -342,6 +342,9 @@ function run_tempest {
     tempest init openshift
     pushd "${TEMPEST_DIR}"
 
+    # Temporary remove manila v1 service until https://redhat.atlassian.net/browse/OSPRH-36292 fixed
+    openstack service delete manila || true
+
     prepare_tempest_cleanup
 
     upload_extra_images
