@@ -120,8 +120,6 @@
         - neutronAPIImage
         # https://redhat.atlassian.net/browse/OSPRH-28744
         - edpmNeutronMetadataAgentImage
-        # https://redhat.atlassian.net/browse/OSPRH-36257
-        - horizonImage
         # Waiting for https://github.com/openstack-k8s-operators/openstack-operator/pull/2055
         - mariadbImage
         # Glance seems good already to remove from here and confirm

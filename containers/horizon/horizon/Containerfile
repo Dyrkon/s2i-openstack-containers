@@ -186,7 +186,7 @@ RUN ln -sf /etc/openstack-dashboard/local_settings \
               /etc/openstack-dashboard/local_settings.d/_2010_integration_tests_deprecated.py.example \
               /etc/openstack-dashboard/local_settings.d/_20_integration_tests_scaffolds.py.example \
               /etc/openstack-dashboard/local_settings.d/_9030_profiler_settings.py.example && \
-    chown -R root:apache /etc/openstack-dashboard && \
+    chown -R apache:apache /etc/openstack-dashboard && \
     chown -R apache:apache /usr/share/openstack-dashboard
 
 # Compile message catalogs (spec %build + tcib compilemessages loop)
@@ -198,11 +198,14 @@ RUN pyver="$(python3 -c 'import sys; print("%d.%d" % sys.version_info[:2])')" &&
          -mindepth 1 -maxdepth 1 -type d -name locale \
          -execdir django-admin compilemessages \; || true
 
-# Pre-compress static assets; kolla_extend_start re-runs if settings change
+# Pre-compress static assets; kolla_extend_start re-runs if settings change.
+# collectstatic/compress run as root and may create root-owned files under
+# openstack_dashboard/local/ (e.g. .secret_key_store); the pod runs as apache.
 RUN python3 /usr/bin/manage.py collectstatic --noinput --clear && \
     python3 /usr/bin/manage.py compress --force && \
     chown -R apache:apache /usr/share/openstack-dashboard/static \
-                           /usr/share/openstack-dashboard/openstack_dashboard/themes
+                           /usr/share/openstack-dashboard/openstack_dashboard/themes \
+                           /usr/share/openstack-dashboard/openstack_dashboard/local
 
 COPY horizon/scripts/extend_start.sh /usr/local/bin/kolla_extend_start
 RUN chmod 755 /usr/local/bin/kolla_extend_start

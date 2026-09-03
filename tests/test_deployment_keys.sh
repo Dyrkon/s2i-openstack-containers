@@ -76,7 +76,6 @@ SKIP_KEYS="$(printf '%s\n' \
   neutronAPIImage \
   edpmNeutronMetadataAgentImage \
   mariadbImage \
-  horizonImage \
   manilaAPIImage \
   manilaSchedulerImage \
   novaAPIImage \
