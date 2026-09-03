@@ -68,6 +68,7 @@ The repository currently builds:
 - `openstack-tempest`;
 - `openstack-unbound`;
 - `openstack-watcher-base`;
+- `openstack-tobiko`;
 
 ## Quick start
 
