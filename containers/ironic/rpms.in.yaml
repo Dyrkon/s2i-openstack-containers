@@ -14,22 +14,22 @@ packages:
   - cargo
   - cmake
   - cpio
+  - dnf
+  - dnf-plugins-core
   - dnsmasq
   - dosfstools
   - e2fsprogs
   - firefox
   - gcc
   - gcc-c++
-  - gdisk
   - git
   - git-core
-  - grub2-efi-x64
+  - grub2-efi
   - hostname
   - httpd
-  - inotify-tools
   - ipmitool
   - iproute
-  - ipxe-bootimgs
+  - ipxe-bootimgs-x86
   - libX11
   - libX11-devel
   - libXau
@@ -85,6 +85,7 @@ packages:
   - python3-cryptography-43.0.0-4.el10
   - python3-devel
   - python3-mod_wsgi
+  - python3-numpy
   - python3-pip
   - python3-requests
   - python3-setuptools
@@ -93,7 +94,6 @@ packages:
   - qemu-img
   - rust
   - shim
-  - syslinux-nonlinux
   - util-linux
   - which
   - xfsprogs

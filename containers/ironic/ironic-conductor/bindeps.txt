@@ -9,11 +9,13 @@ python3-pip
 python3-cryptography-43.0.0-4.el10
 # python3-systemd has C bindings to libsystemd (cannot install via pip)
 python3-systemd
+# python3-numpy is a dependency of websockify. The RPM version is compiled
+# against system BLAS/LAPACK libraries. Building from source is very slow
+python3-numpy
 # Conductor: disk/ISO/image tools
 cpio
 dosfstools
 e2fsprogs
-gdisk
 mtools
 parted
 qemu-img
@@ -23,7 +25,6 @@ xorriso
 ipmitool
 openssh-clients
 # Conductor: process management
-inotify-tools
 psmisc
 util-linux
 # Conductor: kickstart support
@@ -33,5 +34,3 @@ httpd
 mod_ssl
 dnsmasq
 iproute
-# Conductor: BIOS boot (not available on aarch64)
-syslinux-nonlinux

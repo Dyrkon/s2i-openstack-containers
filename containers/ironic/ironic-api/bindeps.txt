@@ -10,6 +10,9 @@ python3-pip
 # (requires cryptography<44), causing an ImportError at runtime. Bump this
 # pin once pyOpenSSL >= 25.0 lands in upper-constraints (drops the <44 cap).
 python3-cryptography-43.0.0-4.el10
+# python3-numpy is a dependency of websockify. The RPM version is compiled
+# against system BLAS/LAPACK libraries. Building from source is very slow
+python3-numpy
 # Runtime shared libraries for pip-compiled cffi and lxml
 libffi
 libxml2

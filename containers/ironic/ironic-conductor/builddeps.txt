@@ -8,6 +8,7 @@ python3-setuptools
 libffi-devel
 openssl-devel
 python3-cryptography
+python3-numpy
 # Required to build lxml (ironic depends on openstacksdk which needs lxml)
 libxml2-devel
 libxslt-devel
@@ -16,10 +17,12 @@ rust
 # To build rpds-py from source
 cargo
 # PXE boot asset packages (downloaded and extracted by extract-boot-assets.sh)
-ipxe-bootimgs
-grub2-efi-x64
+ipxe-bootimgs-x86
+grub2-efi
 shim
-# Needed by extract-boot-assets.sh for rpm2cpio extraction and ESP image build
+# Needed by extract-boot-assets.sh for bootloader package extraction and ESP image build
+dnf
+dnf-plugins-core
 cpio
 dosfstools
 mtools

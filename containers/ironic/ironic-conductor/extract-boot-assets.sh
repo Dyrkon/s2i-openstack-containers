@@ -15,7 +15,8 @@ mkdir -p ${TARGET_DIR}/tftpboot/pxelinux.cfg
 # Download boot asset packages for x86_64
 mkdir -p ${WORKDIR}/x86_64
 cd ${WORKDIR}/x86_64
-microdnf download ipxe-bootimgs-x86 grub2-efi-x64 shim-x64
+dnf download ${DOWNLOADS_X64}
+dnf clean all
 
 # Extract x86_64 RPMs
 for rpm in *.rpm; do
