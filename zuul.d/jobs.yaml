@@ -133,8 +133,6 @@
         - neutronAPIImage
         # https://redhat.atlassian.net/browse/OSPRH-28744
         - edpmNeutronMetadataAgentImage
-        # Waiting for https://github.com/openstack-k8s-operators/openstack-operator/pull/2055
-        - mariadbImage
       # Heat is not part of the default control plane, so enable it during
       # edpm_prepare (same phase where s2i injects its container images) so
       # the mapped s2i heat images (heat/heat-api, heat/heat-engine) actually
