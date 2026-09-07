@@ -17,7 +17,6 @@
               - s2i-openstack-container-content-provider
         - s2i-openstack-deploy-validation:
             irrelevant-files: *irrelevant-for-zuul
-            voting: false
             dependencies:
               - s2i-openstack-container-content-provider
               - s2i-openstack-container-consumer-smoke
