@@ -1,5 +1,5 @@
 master upper-constraints https://opendev.org/openstack/requirements.git master 9edc04289eca1a4c18ae86e4430416d82a5b07fa -
-master tempest https://opendev.org/openstack/tempest.git master 6d858a41e571787dfb6649829b24d0207e043580 46.3.1.dev55
+master tempest https://opendev.org/openstack/tempest.git master 2646b0b2dae54853fe70a720ed5608c86e0fd375 46.3.1.dev61
 master python-tempestconf https://opendev.org/openstack/python-tempestconf.git master 66ea243053f2b7a0abc015164baa4a338d4a2621 3.5.4
 master barbican-tempest-plugin https://opendev.org/openstack/barbican-tempest-plugin.git master 7c5276f0f1087e8565b1ecbf14b23e73398ba25f 4.5.1.dev23
 master cinder-tempest-plugin https://opendev.org/openstack/cinder-tempest-plugin.git master d4894b4df9916d5f7b1968a4e3093f40af4eed44 1.22.1.dev5
@@ -12,7 +12,7 @@ master ironic-tempest-plugin https://opendev.org/openstack/ironic-tempest-plugin
 master keystone-tempest-plugin https://opendev.org/openstack/keystone-tempest-plugin.git master 504a9d3782896db6218ccefaecc057efd58d82e2 0.21.1.dev10
 master manila-tempest-plugin https://opendev.org/openstack/manila-tempest-plugin.git master ef22907162128015cdb0c7f88cdb13f6e176806d 3.1.1.dev37
 master networking-l2gw-tempest-plugin https://opendev.org/x/networking-l2gw-tempest-plugin.git master 26df011d60383b8a885cbf831cecb1743333fefb 0.1.1.dev24
-master neutron-tempest-plugin https://opendev.org/openstack/neutron-tempest-plugin.git master cb3b30a915de2749b73840c7c208731380e60fc5 3.2.1.dev56
+master neutron-tempest-plugin https://opendev.org/openstack/neutron-tempest-plugin.git master 1f9b371bf9821f17dce07cfb500f8c5f75f65c66 3.2.1.dev58
 master octavia-tempest-plugin https://opendev.org/openstack/octavia-tempest-plugin.git master 3d0aefdebb4de7e8ef80821fe8e7ce91a982e92f 3.4.1.dev2
 master telemetry-tempest-plugin https://opendev.org/openstack/telemetry-tempest-plugin.git master 6bd01a718b692e5f4de147c675e59c303dc34d9b 2.10.1.dev18
 master watcher-tempest-plugin https://opendev.org/openstack/watcher-tempest-plugin.git master 227584af2ccd27333d71bd5005b698806a54d1c0 3.8.1.dev10
