@@ -126,13 +126,6 @@
     required-projects:
       - name: openstack-k8s-operators/s2i-openstack-containers
     vars:
-      # Omit unready s2i images so preserve_unlisted keeps payload
-      # defaults. Do not pin quay master-latest in image-mappings.yaml.
-      s2i_ci_skip_os_custom_images:
-        # https://redhat.atlassian.net/browse/OSPRH-28744
-        - neutronAPIImage
-        # https://redhat.atlassian.net/browse/OSPRH-28744
-        - edpmNeutronMetadataAgentImage
       # Heat is not part of the default control plane, so enable it during
       # edpm_prepare (same phase where s2i injects its container images) so
       # the mapped s2i heat images (heat/heat-api, heat/heat-engine) actually

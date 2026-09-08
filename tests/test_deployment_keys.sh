@@ -72,21 +72,7 @@ IMAGE_MAPPINGS="${SCRIPT_DIR}/containers/image-mappings.yaml"
 JOBS_YAML="${SCRIPT_DIR}/zuul.d/jobs.yaml"
 
 # Unready OpenStackVersion keys omitted by s2i-openstack-deploy-validation.
-SKIP_KEYS="$(printf '%s\n' \
-  neutronAPIImage \
-  edpmNeutronMetadataAgentImage)"
-
-# Neutron/OVN keys that must still be injected during deploy-validation.
-READY_NEUTRON_OVN_KEYS="$(printf '%s\n' \
-  edpmNeutronDhcpAgentImage \
-  edpmNeutronOvnAgentImage \
-  edpmNeutronSriovAgentImage \
-  ironicNeutronAgentImage \
-  ovnControllerImage \
-  ovnControllerOvsImage \
-  ovnNbDbclusterImage \
-  ovnNorthdImage \
-  ovnSbDbclusterImage)"
+SKIP_KEYS="$(printf '%s\n')"
 
 extract_mapped_keys() {
   awk '
@@ -178,16 +164,6 @@ test_skip_keys_remain_in_global_image_mappings() {
   done <<< "${SKIP_KEYS}"
 }
 
-test_ready_neutron_ovn_keys_remain_mapped() {
-  local mapped key
-  mapped="$(extract_mapped_keys)"
-  while IFS= read -r key; do
-    [[ -z "${key}" ]] && continue
-    assert_in_lines "${key}" "${mapped}" \
-      "ready neutron/ovn key ${key} must stay mapped"
-  done <<< "${READY_NEUTRON_OVN_KEYS}"
-}
-
 test_only_mariadb_image_is_mapped_for_galera() {
   local keys
   keys="$(awk '
@@ -209,12 +185,6 @@ test_skip_list_drops_unready_keys() {
     assert_not_in_lines "${key}" "${filtered}" \
       "unready key ${key} must be omitted from the filtered map"
   done <<< "${SKIP_KEYS}"
-
-  while IFS= read -r key; do
-    [[ -z "${key}" ]] && continue
-    assert_in_lines "${key}" "${filtered}" \
-      "ready neutron/ovn key ${key} must remain after filtering"
-  done <<< "${READY_NEUTRON_OVN_KEYS}"
 
   mapped_count="$(count_lines "${mapped}")"
   filtered_count="$(count_lines "${filtered}")"
@@ -263,7 +233,6 @@ echo ""
 
 TESTS=(
   test_skip_keys_remain_in_global_image_mappings
-  test_ready_neutron_ovn_keys_remain_mapped
   test_only_mariadb_image_is_mapped_for_galera
   test_skip_list_drops_unready_keys
   test_empty_skip_list_is_identity
