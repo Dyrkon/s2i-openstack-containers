@@ -15,6 +15,19 @@ if [[ -n "${TOBIKO_PATCH_REFSPEC}" ]]; then
     echo "WARNING: TOBIKO_PATCH_REFSPEC is ignored; rebuild the image." >&2
 fi
 
+export_tobiko_git_metadata() {
+    local manifest="/source-built-packages.txt"
+    local _tobiko_commit _tobiko_release
+
+    [[ -r "${manifest}" ]] || return 0
+    IFS=, read -r _ _tobiko_commit _tobiko_release \
+        < <(grep -m1 '^tobiko,' "${manifest}")
+    [[ -n "${_tobiko_commit}" && "${_tobiko_commit}" != unknown ]] && \
+        export TOBIKO_GIT_COMMIT="${_tobiko_commit}"
+    [[ -n "${_tobiko_release}" && "${_tobiko_release}" != unknown ]] && \
+        export TOBIKO_GIT_RELEASE="${_tobiko_release}"
+}
+
 [[ -z "${TOBIKO_TESTENV}" ]] && echo "TOBIKO_TESTENV not set" && exit 1
 
 TOBIKO_DIR="${TOBIKO_DIR:-/var/lib/tobiko}"
@@ -63,6 +76,9 @@ TESTENV="${TESTENV%"${TESTENV##*[![:space:]]}"}"
 
 setenv_exports="$(python3 /usr/local/bin/load_tox_setenv.py "${TESTENV}" "${SITE_PACKAGES}")" || exit 1
 eval "${setenv_exports}"
+
+# After tox setenv: conftest reads TOBIKO_GIT_* before falling back to git.
+export_tobiko_git_metadata
 
 # Flags in PYTEST_ADDOPTS (--skipregex, -k) stay in the env; pytest
 # applies them. If pytestAddopts is a test file, pass that file to
