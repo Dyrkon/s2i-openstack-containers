@@ -129,4 +129,4 @@ yappi==1.7.6
 zstd==1.5.7.2
 
 # The following packages are considered to be unsafe in a requirements file:
-setuptools==84.0.0
+setuptools==80.10.2
