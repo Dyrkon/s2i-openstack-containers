@@ -67,6 +67,7 @@ RUN if [ -f "/etc/yum.repos.d/ubi.repo" ]; then rm -f /etc/yum.repos.d/ubi.repo 
 # remove this until fixed in CentOS-10-stream
 # SKIP IN DOWNSTREAM
 RUN rpm -e openssl-fips-provider-so --nodeps || true
+RUN rpm -e openssl-fips-provider --nodeps || true
 
 RUN pkgs=$(cat /tmp/bindeps.txt | grep -v '^#' | grep -v '^$' | tr '\n' ' ') && \
     if [ -n "${pkgs}" ]; then microdnf -y install ${pkgs} && microdnf clean all && rm -rf /var/cache/dnf; fi && \
