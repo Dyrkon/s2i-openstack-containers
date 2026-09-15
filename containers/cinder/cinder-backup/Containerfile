@@ -85,6 +85,9 @@ RUN for src_dir in /src/*/ /src/overrides/*/; do \
       fi; \
     done > /source-built-packages.txt
 
+RUN mkdir -p /configfiles/etc/cinder && \
+    cp -a ${SERVICE_SRC}/etc/cinder/rootwrap.conf /configfiles/etc/cinder/ && \
+    cp -a ${SERVICE_SRC}/etc/cinder/rootwrap.d /configfiles/etc/cinder/
 
 # --- Runtime stage ---
 FROM ${BASE_IMAGE}
@@ -119,5 +122,14 @@ RUN extrapkgs=$(cat /tmp/pythondeps.txt | grep -v '^#' | grep -v '^$' | tr '\n' 
 RUN mkdir -p /etc/cinder /var/log/cinder /var/lib/cinder /var/cache/cinder && \
     chown -R cinder:cinder /etc/cinder /var/log/cinder /var/lib/cinder /var/cache/cinder && \
     chmod 770 /var/log/cinder /var/lib/cinder /var/cache/cinder
+
+COPY --from=build /configfiles/etc/cinder/rootwrap.conf /etc/cinder/rootwrap.conf
+COPY --from=build /configfiles/etc/cinder/rootwrap.d /etc/cinder/rootwrap.d
+
+COPY common/cinder-sudoers /etc/sudoers.d/cinder-sudoers
+
+RUN chmod 750 /etc/sudoers.d && \
+    chmod 440 /etc/sudoers.d/cinder-sudoers && \
+    chown -R cinder:cinder /etc/cinder
 
 USER cinder
