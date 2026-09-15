@@ -103,17 +103,20 @@ commits. These PRs trigger builds and validation against the
 openstack-k8s-operators environment, so that container images pushed to the
 registry have been verified to be functional.
 
-Container images are published by the Zuul post-merge job to
-`quay.io/openstack-s2i-containers/` with two tags per image:
+Container images are published by the post-merge job to
+`quay.io/openstack-s2i-containers/` with three tags per image:
 
 - **`<stream>-latest`** -- rolling tag, always pointing to the last successfully
   built and validated containers for that stream.
 - **`<stream>-<sha>`** -- immutable tag tied to the specific commit in this
-  repository that produced the build. These tags have an automatic expiration
-  set via the Quay API.
+  repository that produced the build.
+- **`sha256-<manifest-digest>`** -- content-addressed tag for the pushed
+  manifest. It preserves the manifest and its layers when the rolling tag
+  moves to a later build.
 
-For example, for the `master` stream an image is tagged as both
-`master-latest` and `master-<commit-sha>`.
+For example, for the `master` stream an image is tagged as `master-latest`,
+`master-<commit-sha>`, and `sha256-<manifest-digest>`. No publication tag is
+assigned a Quay expiration.
 
 Every image also carries OCI labels set at build time:
 

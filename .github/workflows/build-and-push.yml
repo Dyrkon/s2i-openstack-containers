@@ -19,13 +19,12 @@ jobs:
       NAMESPACE: ${{ secrets.IMAGENAMESPACE }}
       IMAGE_PREFIX: openstack
       TAG: "master-${{ github.sha }},master-latest"
-      TAG_EXPIRATION_WEEKS: 12
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: ./.github/actions/setup-tox
 
       - name: Install system dependencies
-        run: sudo apt-get update && sudo apt-get install -y buildah podman
+        run: sudo apt-get update && sudo apt-get install -y buildah podman skopeo
 
       - name: Build images
         run: tox -e build
@@ -82,36 +81,38 @@ jobs:
         env:
           REGISTRY_AUTH_FILE: ${{ runner.temp }}/auth.json
 
-      - name: Expire commit-sha tags
-        # Set a Quay tag expiration on the master-<sha> tag only, via the
-        # tag update API. This is a per-tag pointer, not an image label, so
-        # it never touches master-latest (or any other tag later applied to
-        # the same image) and has no effect on downstream container builds,
-        # which don't run this workflow.
+      - name: Tag images by digest
+        # Keep a content-addressed tag in addition to master-latest. It
+        # retains the manifest and its layers after the rolling tag moves.
+        env:
+          REGISTRY_AUTH_FILE: ${{ runner.temp }}/auth.json
         run: |
-          set -x
-          EXP_TIME=$(($(date +%s) + TAG_EXPIRATION_WEEKS * 604800))
+          set -euo pipefail
           for FULL_REPO in ${{ steps.built-images.outputs.repos }}; do
-            REPO_NAME="${FULL_REPO##*/}"
-            REPO_URL="https://${{ env.REGISTRY }}/api/v1/repository/${NAMESPACE}/${REPO_NAME}"
-            TAG_NAME="master-${{ github.sha }}"
-            echo "Setting expiration on ${NAMESPACE}/${REPO_NAME}:${TAG_NAME}"
+            # Read the immutable commit tag rather than master-latest: another
+            # job may move the rolling tag after this job has pushed its images.
+            SOURCE="docker://${FULL_REPO}:master-${{ github.sha }}"
+            DIGEST=$(skopeo inspect --authfile "$REGISTRY_AUTH_FILE" --no-tags \
+              --format '{{.Digest}}' "$SOURCE")
+            TAG_NAME="${DIGEST/:/-}"
+            TARGET="docker://${FULL_REPO}:${TAG_NAME}"
+            echo "Tagging ${FULL_REPO}:master-${{ github.sha }} as ${TAG_NAME}"
 
-            HTTP_STATUS=$(curl -s -o response.json -w "%{http_code}" -X PUT \
-              -H "Authorization: Bearer ${{ secrets.QUAY_OAUTH_TOKEN }}" \
-              -H "Content-Type: application/json" \
-              -d "{\"expiration\": ${EXP_TIME}}" \
-              "${REPO_URL}/tag/${TAG_NAME}")
+            skopeo copy --all --preserve-digests \
+              --src-authfile "$REGISTRY_AUTH_FILE" \
+              --dest-authfile "$REGISTRY_AUTH_FILE" \
+              "$SOURCE" "$TARGET"
 
-            if [ "$HTTP_STATUS" -lt 200 ] || [ "$HTTP_STATUS" -ge 300 ]; then
-              echo "Failed to set expiration, HTTP ${HTTP_STATUS}: $(cat response.json)"
+            TARGET_DIGEST=$(skopeo inspect --authfile "$REGISTRY_AUTH_FILE" --no-tags \
+              --format '{{.Digest}}' "$TARGET")
+            if [ "$TARGET_DIGEST" != "$DIGEST" ]; then
+              echo "Digest tag ${FULL_REPO}:${TAG_NAME} resolved to ${TARGET_DIGEST}, expected ${DIGEST}" >&2
               exit 1
             fi
-            echo "Response: $(cat response.json)"
 
-            EXPIRATION=$(curl -s \
-              -H "Authorization: Bearer ${{ secrets.QUAY_OAUTH_TOKEN }}" \
-              "${REPO_URL}/tag/?specificTag=${TAG_NAME}&onlyActiveTags=true" \
-              | jq -r '.tags[0].expiration // "none"')
-            echo "Confirmed expiration for ${REPO_NAME}:${TAG_NAME}: ${EXPIRATION}"
+            LATEST_DIGEST=$(skopeo inspect --authfile "$REGISTRY_AUTH_FILE" --no-tags \
+              --format '{{.Digest}}' "docker://${FULL_REPO}:master-latest")
+            if [ "$LATEST_DIGEST" != "$DIGEST" ]; then
+              echo "Warning: ${FULL_REPO}:master-latest advanced to ${LATEST_DIGEST}; this build is ${DIGEST}" >&2
+            fi
           done
