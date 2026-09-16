@@ -1,2 +1,5 @@
 # Required by keystonemiddleware for memcache-based token caching
 oslo.cache[dogpile]
+
+# Paste/PasteDeploy require pkg_resources, removed in setuptools 82
+setuptools==80.10.2

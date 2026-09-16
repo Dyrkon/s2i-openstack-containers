@@ -5,4 +5,4 @@ pbr==7.0.3
 six==1.17.0
 
 # The following packages are considered to be unsafe in a requirements file:
-setuptools==82.0.1
+setuptools==80.10.2

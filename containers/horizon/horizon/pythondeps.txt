@@ -2,3 +2,6 @@
 PyMySQL
 # Memcached backend used by horizon-operator (PyMemcacheCache)
 pymemcache
+
+# Paste/PasteDeploy require pkg_resources, removed in setuptools 82
+setuptools==80.10.2

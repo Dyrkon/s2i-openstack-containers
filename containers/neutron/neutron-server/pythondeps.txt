@@ -7,3 +7,6 @@ oslo.cache[dogpile]
 # (neutron-fwaas and tap-as-a-service are built from source alongside
 # neutron, see sources.txt — the pypi/upper-constraints releases are
 # incompatible with master neutron)
+
+# Paste/PasteDeploy require pkg_resources, removed in setuptools 82
+setuptools==80.10.2
