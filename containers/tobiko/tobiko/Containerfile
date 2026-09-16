@@ -3,8 +3,12 @@ ARG BASE_IMAGE=localhost/openstack/openstack-base:latest
 # --- Build stage: compile wheels from source ---
 FROM ${BASE_IMAGE} AS build
 
+ARG SOURCE_VERSION_STREAM=master
+ARG PBR_VERSION_FROM_GIT=false
+
 ARG CONSTRAINTS_FILE=requirements.lock
 COPY ${CONSTRAINTS_FILE} /deps-upper-constraints.txt
+COPY sources.txt /source-versions/project.txt
 COPY src/ /src/
 COPY tobiko/src/ /src/
 
@@ -36,8 +40,19 @@ RUN cp /deps-upper-constraints.txt /tmp/build-constraints.txt && \
 # First build the wheels for the packages themselves
 RUN for pkg in /src/*/ /src/overrides/*/; do \
       if [ -d "${pkg}" ] && [ -f "${pkg}/setup.cfg" -o -f "${pkg}/setup.py" -o -f "${pkg}/pyproject.toml" ]; then \
-        pip3 wheel --no-cache-dir --no-deps \
-          --wheel-dir=/wheels/pkgs "${pkg}"; \
+        source_name=$(basename "${pkg%/}"); \
+        if [ "${PBR_VERSION_FROM_GIT}" = "true" ] || \
+            [ "${pkg#/src/overrides/}" != "${pkg}" ]; then \
+          env -u PBR_VERSION pip3 wheel --no-cache-dir --no-deps \
+            --wheel-dir=/wheels/pkgs "${pkg}"; \
+        else \
+          source_version=$(awk -v stream="${SOURCE_VERSION_STREAM}" \
+            -v name="${source_name}" \
+            '$1 == stream && $2 == name { print $6; exit }' \
+            /source-versions/project.txt); \
+          PBR_VERSION="${source_version}" pip3 wheel --no-cache-dir --no-deps \
+            --no-build-isolation --wheel-dir=/wheels/pkgs "${pkg}"; \
+        fi; \
       fi; \
     done
 
@@ -49,8 +64,17 @@ RUN pip3 wheel --no-cache-dir --no-deps \
 RUN for src_dir in /src/*/ /src/overrides/*/; do \
       if [ -d "${src_dir}" ] && [ -f "${src_dir}/setup.cfg" ]; then \
         pkg_name=$(grep -m1 '^name' "${src_dir}/setup.cfg" | sed 's/.*=\s*//'); \
-        commit=$(git -C "${src_dir}" rev-parse HEAD 2>/dev/null || echo "unknown"); \
-        version=$(ls /wheels/pkgs/${pkg_name//-/_}-*.whl 2>/dev/null | head -1 | sed 's/.*-\([0-9][^-]*\)-.*/\1/' || echo "unknown"); \
+        source_name=$(basename "${src_dir%/}"); \
+        commit=$(awk -v stream="${SOURCE_VERSION_STREAM}" -v name="${source_name}" \
+          '$1 == stream && $2 == name { print $5; exit }' /source-versions/project.txt); \
+        version=$(awk -v stream="${SOURCE_VERSION_STREAM}" -v name="${source_name}" \
+          '$1 == stream && $2 == name { print $6; exit }' /source-versions/project.txt); \
+        if [ -z "${commit}" ]; then \
+          commit=$(git -C "${src_dir}" rev-parse HEAD 2>/dev/null || echo "unknown"); \
+        fi; \
+        if [ -z "${version}" ] || [ "${version}" = "-" ]; then \
+          version=$(ls /wheels/pkgs/${pkg_name//-/_}-*.whl 2>/dev/null | head -1 | sed 's/.*-\([0-9][^-]*\)-.*/\1/' || echo "unknown"); \
+        fi; \
         echo "${pkg_name},${commit},${version}"; \
       fi; \
     done > /source-built-packages.txt
@@ -97,17 +121,13 @@ RUN tar -zx -C /usr/local/bin -f /tmp/openshift-client-linux.tar.gz oc kubectl &
 # in the wheel (setup.cfg packages only tobiko).
 COPY --from=build /src/tobiko/tools/run_tests.py \
                    /src/tobiko/tools/common.py /usr/share/tobiko/tools/
-# TODO: remove when tobiko/tests/conftest.py does not require git metadata.
-COPY tobiko/scripts/tobiko_skip_git_metadata.py \
-     tobiko/scripts/pytest_wrapper.py \
-     tobiko/scripts/sitecustomize.py /usr/share/tobiko/tools/
+COPY tobiko/scripts/sitecustomize.py /usr/share/tobiko/tools/
 RUN python3 -c "\
 import importlib.util, os, shutil; \
 spec = importlib.util.find_spec('tobiko'); \
 assert spec and spec.origin, 'tobiko is not installed'; \
 sp = os.path.dirname(os.path.dirname(os.path.abspath(spec.origin))); \
-shutil.copy('/usr/share/tobiko/tools/sitecustomize.py', os.path.join(sp, 'sitecustomize.py'))" && \
-    install -m 755 /usr/share/tobiko/tools/pytest_wrapper.py /usr/bin/pytest
+shutil.copy('/usr/share/tobiko/tools/sitecustomize.py', os.path.join(sp, 'sitecustomize.py'))"
 COPY --from=build /src/tobiko/tox.ini /usr/share/tobiko/tox.ini
 RUN printf '%s\n' '#!/bin/sh' 'exec python3 /usr/share/tobiko/tools/run_tests.py "$@"' \
         > /usr/bin/run_tests.py && chmod +x /usr/bin/run_tests.py && \
