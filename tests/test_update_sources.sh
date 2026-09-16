@@ -586,6 +586,27 @@ test_update_sources_all_updates_everything() {
   assert_field "${src3}" master test-svc3 5 "${SVC3_HASH_NEW}"
 }
 
+test_update_sources_nonexistent_branch_fails() {
+  local src="${TEST_DIR}/containers/test-svc/sources.txt"
+  cat > "${src}" <<EOF
+master upper-constraints ${UPSTREAM_REQ} master ${REQ_HASH_OLD}
+master test-svc ${UPSTREAM_SVC} nonexistent-branch ${SVC_HASH_OLD}
+EOF
+
+  local before
+  before=$(cat "${src}")
+
+  if _run_build STREAM=master; then
+    echo "    ASSERTION FAILED: expected failure for nonexistent branch"
+    return 1
+  fi
+
+  assert_grep "ERROR.*does not exist" "${TEST_DIR}/build.log"
+  assert "auto-cloned source removed" \
+    test ! -d "${TEST_DIR}/containers/test-svc/src/test-svc"
+  assert "sources.txt unchanged" test "$(cat "${src}")" = "${before}"
+}
+
 test_update_sources_unknown_target_fails() {
   if _run_cmd STREAM=master -- update-sources nonexistent 2>/dev/null; then
     echo "    ASSERTION FAILED: expected failure for unknown target"
@@ -991,6 +1012,7 @@ TESTS=(
   test_update_sources_multiple_targets_generates_rpms_in
   test_update_sources_single_target_does_not_affect_other
   test_update_sources_all_updates_everything
+  test_update_sources_nonexistent_branch_fails
   test_update_sources_unknown_target_fails
   test_update_sources_multiple_targets_symlinks
   test_update_lockfiles_regenerates_lockfile
