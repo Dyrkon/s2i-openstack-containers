@@ -1,1 +1,1 @@
-master networking-baremetal https://opendev.org/openstack/networking-baremetal.git master 2fe23081f329c83ad1c6274a3ffafd4e85d4918e 8.1.1.dev1
+master networking-baremetal https://opendev.org/openstack/networking-baremetal.git stable/2026.2 6da7ef99d723d272e85ada346aae9aecf94d9f41 8.1.1.dev2
