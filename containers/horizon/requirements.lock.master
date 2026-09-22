@@ -16,7 +16,7 @@ django-debreach==2.1.0
 dogpile-cache==1.5.0
 fasteners==0.20
 futurist==3.5.0
-horizon==26.0.0
+horizon==27.0.0
 idna==3.18
 iso8601==2.1.0
 jmespath==1.1.0
@@ -91,7 +91,6 @@ warlock==2.1.0
 wcwidth==0.8.2
 webob==1.8.11
 wrapt==2.3.0
-xstatic==1.0.3
 xstatic-angular==1.8.2.3
 xstatic-angular-bootstrap==2.5.0.1
 xstatic-angular-fileupload==12.2.13.2

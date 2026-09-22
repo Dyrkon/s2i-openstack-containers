@@ -1204,7 +1204,11 @@ clone_at_branch() {
   echo "--- ls-remote failed for ${url} (${branch}); cloning ---"
   if ! git clone --branch "${branch}" "${url}" "${dest}" 2>/dev/null; then
     git clone "${url}" "${dest}" 2>/dev/null
-    git -C "${dest}" checkout "${branch}"
+    if ! git -C "${dest}" checkout "${branch}"; then
+      echo "ERROR: ref '${branch}' does not exist in ${url}" >&2
+      rm -rf "${dest}"
+      return 1
+    fi
   fi
   _AUTO_CLONED["${dest}"]=1
   _CLONE_RESULT=$(git -C "${dest}" rev-parse HEAD)
@@ -1306,7 +1310,10 @@ update_sources_file() {
       fi
       new_version="${_SOURCE_VERSION_RESULT}"
     else
-      clone_at_branch "${src_dir}/${name}" "${url}" "${branch}"
+      if ! clone_at_branch "${src_dir}/${name}" "${url}" "${branch}"; then
+        rm "${tmp_file}"
+        return 1
+      fi
       new_hash="${_CLONE_RESULT}"
       # Strip excluded requirements from the freshly-cloned tree so the lockfile
       # generated next by pip-compile omits them. Pre-existing checkouts (handled
