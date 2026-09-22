@@ -1,2 +1,5 @@
 # Ceph RBD support
 ceph-common
+# NFS backup driver: os-brick shells out to mount(8), which needs the
+# /sbin/mount.nfs helper from nfs-utils
+nfs-utils
