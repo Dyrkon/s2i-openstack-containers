@@ -12,6 +12,7 @@ packages:
   - cargo
   - ceph-common
   - device-mapper-multipath
+  - dosfstools
   - e2fsprogs
   - gcc
   - gcc-c++
