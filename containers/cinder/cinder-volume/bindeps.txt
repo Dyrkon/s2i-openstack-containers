@@ -8,3 +8,12 @@ qemu-img
 # NFS backend support: os-brick shells out to mount(8), which needs the
 # /sbin/mount.nfs helper from nfs-utils
 nfs-utils
+# LVM backend: cinder.brick.local_dev.lvm shells out to vgs/lvs/lvcreate/
+# lvremove/lvextend via cinder-rootwrap
+lvm2
+# LVM-LIO target: cinder-rtstool drives the LIO kernel target
+targetcli
+# NVMe-oF target (nvmet driver)
+nvmetcli
+# LUKS encrypted volumes: os-brick/castellan shell out to cryptsetup
+cryptsetup
