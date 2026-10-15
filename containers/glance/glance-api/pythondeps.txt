@@ -6,6 +6,8 @@ oslo.cache[dogpile]
 glance_store[cinder]
 # Swift store backend (python-swiftclient)
 glance_store[swift]
+# S3 store backend (boto3/botocore)
+glance_store[s3]
 
 # Paste/PasteDeploy require pkg_resources, removed in setuptools 82
 setuptools==80.10.2
