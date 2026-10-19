@@ -9,6 +9,7 @@
       - ironic-operator-s2i-component-jobs
       - keystone-operator-s2i-component-jobs
       - manila-operator-s2i-component-jobs
+      - neutron-operator-s2i-component-jobs
       - nova-operator-s2i-component-jobs
       - swift-operator-s2i-component-jobs
       - watcher-operator-s2i-component-jobs
