@@ -19,5 +19,15 @@ lvm2
 targetcli
 # NVMe-oF target (nvmet driver)
 nvmetcli
-# LUKS encrypted volumes: os-brick/castellan shell out to cryptsetup
+# LUKS encrypted volumes
 cryptsetup
+# Multipath attachments
+device-mapper-multipath
+# SCSI device lookup
+lsscsi
+# NVMe-oF initiator
+nvme-cli
+# SCSI generic tools
+sg3_utils
+# udevadm settle
+systemd-udev
