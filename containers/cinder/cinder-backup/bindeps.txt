@@ -6,3 +6,17 @@ iscsi-initiator-utils
 # NFS backup driver: os-brick shells out to mount(8), which needs the
 # /sbin/mount.nfs helper from nfs-utils
 nfs-utils
+# Multipath attachments
+device-mapper-multipath
+# SCSI device lookup
+lsscsi
+# NVMe-oF initiator
+nvme-cli
+# SCSI generic tools
+sg3_utils
+# udevadm settle
+systemd-udev
+# LUKS encrypted volumes
+cryptsetup
+# LVM tooling
+lvm2

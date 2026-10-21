@@ -1,0 +1,4 @@
+# Swift backup driver
+python-swiftclient
+# S3 backup driver
+boto3

@@ -12,6 +12,7 @@ packages:
   - cargo
   - ceph-common
   - cryptsetup
+  - device-mapper-multipath
   - gcc
   - gcc-c++
   - git-core
@@ -23,9 +24,11 @@ packages:
   - libxml2-devel
   - libxslt
   - libxslt-devel
+  - lsscsi
   - lvm2
   - mod_ssl
   - nfs-utils
+  - nvme-cli
   - nvmetcli
   - openssl-devel
   - python3
@@ -37,4 +40,6 @@ packages:
   - qemu-img
   - qemu-kvm-block-rbd
   - rust
+  - sg3_utils
+  - systemd-udev
   - targetcli
