@@ -14,6 +14,8 @@ python3-cryptography-43.0.0-4.el10
 qemu-img
 # iSCSI support (os-brick / cinder store)
 iscsi-initiator-utils
+# NFS cinder backend
+nfs-utils
 # Ceph RBD support
 ceph-common
 python3-rados
