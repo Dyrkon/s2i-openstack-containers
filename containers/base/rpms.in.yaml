@@ -13,6 +13,7 @@ packages:
   - curl
   - gcc
   - glibc-langpack-en
+  - openssl-fips-provider
   - procps-ng
   - python3
   - python3-devel
