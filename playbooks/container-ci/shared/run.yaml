@@ -223,7 +223,7 @@
         - name: Run sync-locks for staged projects
           ansible.builtin.command:
             argv: >-
-              {{ [ensure_tox_executable | default('tox'), '-e', 'sync-locks', '--']
+              {{ [tox_executable | default('tox'), '-e', 'sync-locks', '--']
                  + s2i_ci_staged_projects }}
             chdir: "{{ s2i_ci_container_repo }}"
           environment:
